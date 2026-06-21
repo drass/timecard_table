@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+
+/// Visual styling for a [TimecardTable].
+///
+/// Every property is optional; anything left `null` falls back to a sensible
+/// value derived from the ambient [Theme] at build time. Use [copyWith] to
+/// tweak a base style, or [TimecardTableStyle.fromTheme] for a theme-aligned
+/// starting point.
+@immutable
+class TimecardTableStyle {
+  const TimecardTableStyle({
+    this.headerTextStyle,
+    this.weekdayTextStyle,
+    this.cellTextStyle,
+    this.labelTextStyle,
+    this.totalTextStyle,
+    this.cornerTextStyle,
+    this.headerBackground,
+    this.labelBackground,
+    this.totalBackground,
+    this.weekendBackground,
+    this.todayBackground,
+    this.cellBackground,
+    this.evenRowBackground,
+    this.oddRowBackground,
+    this.cellPadding = const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+    this.headerPadding = const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+    this.labelPadding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    this.cellAlignment = Alignment.center,
+    this.labelAlignment = Alignment.centerLeft,
+    this.headerAlignment = Alignment.center,
+    this.dayColumnWidth = 48,
+    this.labelColumnWidth,
+    this.totalColumnWidth,
+    this.headerHeight,
+    this.border,
+    this.borderRadius,
+    this.emptyPlaceholder = '·',
+  });
+
+  /// Builds a style whose defaults are aligned with [theme]/[ColorScheme].
+  factory TimecardTableStyle.fromTheme(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final text = theme.textTheme;
+    return TimecardTableStyle(
+      headerTextStyle: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+      weekdayTextStyle: text.labelSmall?.copyWith(
+        color: text.labelSmall?.color?.withValues(alpha: 0.7),
+      ),
+      cellTextStyle: text.bodyMedium,
+      labelTextStyle: text.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+      totalTextStyle: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+      cornerTextStyle: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+      headerBackground: scheme.surfaceContainerHighest,
+      labelBackground: scheme.surfaceContainerHighest,
+      totalBackground: scheme.surfaceContainerHigh,
+      weekendBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+      todayBackground: scheme.primary.withValues(alpha: 0.12),
+      border: TableBorder.all(color: scheme.outlineVariant, width: 1),
+      borderRadius: BorderRadius.circular(8),
+    );
+  }
+
+  /// Text style for the day header labels.
+  final TextStyle? headerTextStyle;
+
+  /// Text style for the secondary weekday line in [TimecardHeaderLabel.dayAndWeekday].
+  final TextStyle? weekdayTextStyle;
+
+  /// Text style for ordinary data cells.
+  final TextStyle? cellTextStyle;
+
+  /// Text style for the leading row labels.
+  final TextStyle? labelTextStyle;
+
+  /// Text style for total cells.
+  final TextStyle? totalTextStyle;
+
+  /// Text style for the top-left corner cell.
+  final TextStyle? cornerTextStyle;
+
+  /// Background for the header row.
+  final Color? headerBackground;
+
+  /// Background for the leading label column.
+  final Color? labelBackground;
+
+  /// Background for total cells.
+  final Color? totalBackground;
+
+  /// Background tint applied to weekend columns (header + cells).
+  final Color? weekendBackground;
+
+  /// Background tint applied to today's column (header + cells).
+  final Color? todayBackground;
+
+  /// Background for ordinary data cells (lowest priority).
+  final Color? cellBackground;
+
+  /// Optional zebra-striping background for even data rows.
+  final Color? evenRowBackground;
+
+  /// Optional zebra-striping background for odd data rows.
+  final Color? oddRowBackground;
+
+  /// Padding inside data cells.
+  final EdgeInsetsGeometry cellPadding;
+
+  /// Padding inside header cells.
+  final EdgeInsetsGeometry headerPadding;
+
+  /// Padding inside leading label cells.
+  final EdgeInsetsGeometry labelPadding;
+
+  /// Alignment of content within data cells.
+  final AlignmentGeometry cellAlignment;
+
+  /// Alignment of content within leading label cells.
+  final AlignmentGeometry labelAlignment;
+
+  /// Alignment of content within header cells.
+  final AlignmentGeometry headerAlignment;
+
+  /// Fixed width for each day column.
+  final double dayColumnWidth;
+
+  /// Fixed width for the leading label column. When `null` the column sizes to
+  /// its content (intrinsic width).
+  final double? labelColumnWidth;
+
+  /// Fixed width for the trailing total column. Defaults to [dayColumnWidth]
+  /// (scaled up a little) when `null`.
+  final double? totalColumnWidth;
+
+  /// Explicit height for the header row. When `null` it is intrinsic for
+  /// non-rotated headers and defaults to a taller value when the header is
+  /// rotated (see [TimecardHeaderConfig.rotationDegrees]).
+  final double? headerHeight;
+
+  /// Table border. When `null`, no border is drawn.
+  final TableBorder? border;
+
+  /// Rounds the outer corners of the table border.
+  final BorderRadius? borderRadius;
+
+  /// Text used for cells that have no recorded value.
+  final String emptyPlaceholder;
+
+  /// Returns a copy of this style with the given fields replaced.
+  TimecardTableStyle copyWith({
+    TextStyle? headerTextStyle,
+    TextStyle? weekdayTextStyle,
+    TextStyle? cellTextStyle,
+    TextStyle? labelTextStyle,
+    TextStyle? totalTextStyle,
+    TextStyle? cornerTextStyle,
+    Color? headerBackground,
+    Color? labelBackground,
+    Color? totalBackground,
+    Color? weekendBackground,
+    Color? todayBackground,
+    Color? cellBackground,
+    Color? evenRowBackground,
+    Color? oddRowBackground,
+    EdgeInsetsGeometry? cellPadding,
+    EdgeInsetsGeometry? headerPadding,
+    EdgeInsetsGeometry? labelPadding,
+    AlignmentGeometry? cellAlignment,
+    AlignmentGeometry? labelAlignment,
+    AlignmentGeometry? headerAlignment,
+    double? dayColumnWidth,
+    double? labelColumnWidth,
+    double? totalColumnWidth,
+    double? headerHeight,
+    TableBorder? border,
+    BorderRadius? borderRadius,
+    String? emptyPlaceholder,
+  }) {
+    return TimecardTableStyle(
+      headerTextStyle: headerTextStyle ?? this.headerTextStyle,
+      weekdayTextStyle: weekdayTextStyle ?? this.weekdayTextStyle,
+      cellTextStyle: cellTextStyle ?? this.cellTextStyle,
+      labelTextStyle: labelTextStyle ?? this.labelTextStyle,
+      totalTextStyle: totalTextStyle ?? this.totalTextStyle,
+      cornerTextStyle: cornerTextStyle ?? this.cornerTextStyle,
+      headerBackground: headerBackground ?? this.headerBackground,
+      labelBackground: labelBackground ?? this.labelBackground,
+      totalBackground: totalBackground ?? this.totalBackground,
+      weekendBackground: weekendBackground ?? this.weekendBackground,
+      todayBackground: todayBackground ?? this.todayBackground,
+      cellBackground: cellBackground ?? this.cellBackground,
+      evenRowBackground: evenRowBackground ?? this.evenRowBackground,
+      oddRowBackground: oddRowBackground ?? this.oddRowBackground,
+      cellPadding: cellPadding ?? this.cellPadding,
+      headerPadding: headerPadding ?? this.headerPadding,
+      labelPadding: labelPadding ?? this.labelPadding,
+      cellAlignment: cellAlignment ?? this.cellAlignment,
+      labelAlignment: labelAlignment ?? this.labelAlignment,
+      headerAlignment: headerAlignment ?? this.headerAlignment,
+      dayColumnWidth: dayColumnWidth ?? this.dayColumnWidth,
+      labelColumnWidth: labelColumnWidth ?? this.labelColumnWidth,
+      totalColumnWidth: totalColumnWidth ?? this.totalColumnWidth,
+      headerHeight: headerHeight ?? this.headerHeight,
+      border: border ?? this.border,
+      borderRadius: borderRadius ?? this.borderRadius,
+      emptyPlaceholder: emptyPlaceholder ?? this.emptyPlaceholder,
+    );
+  }
+
+  /// Merges this style on top of [base], preferring this style's non-null
+  /// values. Useful to layer a theme-derived base with user overrides.
+  TimecardTableStyle mergeOnto(TimecardTableStyle base) {
+    return base.copyWith(
+      headerTextStyle: headerTextStyle,
+      weekdayTextStyle: weekdayTextStyle,
+      cellTextStyle: cellTextStyle,
+      labelTextStyle: labelTextStyle,
+      totalTextStyle: totalTextStyle,
+      cornerTextStyle: cornerTextStyle,
+      headerBackground: headerBackground,
+      labelBackground: labelBackground,
+      totalBackground: totalBackground,
+      weekendBackground: weekendBackground,
+      todayBackground: todayBackground,
+      cellBackground: cellBackground,
+      evenRowBackground: evenRowBackground,
+      oddRowBackground: oddRowBackground,
+      cellPadding: cellPadding,
+      headerPadding: headerPadding,
+      labelPadding: labelPadding,
+      cellAlignment: cellAlignment,
+      labelAlignment: labelAlignment,
+      headerAlignment: headerAlignment,
+      dayColumnWidth: dayColumnWidth,
+      labelColumnWidth: labelColumnWidth,
+      totalColumnWidth: totalColumnWidth,
+      headerHeight: headerHeight,
+      border: border,
+      borderRadius: borderRadius,
+      emptyPlaceholder: emptyPlaceholder,
+    );
+  }
+}
