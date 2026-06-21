@@ -6,6 +6,7 @@ import 'timecard_header_config.dart';
 import 'timecard_models.dart';
 import 'timecard_row.dart';
 import 'timecard_style.dart';
+import 'timecard_summary_row.dart';
 import 'timecard_title.dart';
 import 'timecard_totals_config.dart';
 import 'utils.dart';
@@ -47,6 +48,7 @@ class TimecardTable extends StatelessWidget {
     required this.timecardRows,
     required this.year,
     required this.month,
+    this.summaryRows = const <TimecardSummaryRow>[],
     this.title,
     this.style,
     this.headerConfig = const TimecardHeaderConfig(),
@@ -68,6 +70,14 @@ class TimecardTable extends StatelessWidget {
 
   /// The data rows to display and summarise.
   final List<TimecardRow> timecardRows;
+
+  /// Extra rows rendered beneath the data and the auto totals row.
+  ///
+  /// Each [TimecardSummaryRow] holds either explicit per-day values or a
+  /// computation derived from other rows. They are evaluated top-to-bottom, so a
+  /// computed row can build on the rows above it (e.g. an `overtime` row, then a
+  /// `worked + overtime` row, then a grand total of both).
+  final List<TimecardSummaryRow> summaryRows;
 
   /// The calendar year of the displayed month.
   final int year;
@@ -149,6 +159,8 @@ class TimecardTable extends StatelessWidget {
     final showColumnTotals =
         totals.showColumnTotals || totals.showGrandTotal;
 
+    final summaries = _evaluateSummaries(days);
+
     final table = Table(
       border: _resolveBorder(resolvedStyle),
       defaultVerticalAlignment: TableCellVerticalAlignment.fill,
@@ -160,11 +172,13 @@ class TimecardTable extends StatelessWidget {
           _buildDataRow(context, resolvedStyle, format, timecardRows[i], i, days, now, showRowTotals),
         if (showColumnTotals)
           _buildTotalsRow(context, resolvedStyle, format, days, now, showRowTotals),
+        for (final summary in summaries)
+          _buildSummaryRow(context, resolvedStyle, format, summary, days, showRowTotals),
       ],
     );
 
     Widget result = table;
-    if (resolvedStyle.borderRadius != null) {
+    if (resolvedStyle.borderRadius != null && !resolvedStyle.cardMode) {
       result = ClipRRect(borderRadius: resolvedStyle.borderRadius!, child: result);
     }
     if (scrollable) {
@@ -190,6 +204,9 @@ class TimecardTable extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   TableBorder? _resolveBorder(TimecardTableStyle style) {
+    // Card mode draws each cell as a separate tile, so the shared grid border
+    // is dropped entirely.
+    if (style.cardMode) return null;
     final border = style.border;
     if (border == null) return null;
     if (style.borderRadius == null) return border;
@@ -238,8 +255,13 @@ class TimecardTable extends StatelessWidget {
     final height = headerConfig.resolveHeight();
     return TableRow(
       children: [
-        _driverCell(
+        // Corner is a fill cell: the day-header cells below drive the row
+        // height (they always have content), so an empty corner no longer
+        // collapses the header. See _buildHeaderCell.
+        _fillCell(
+          style: style,
           background: style.labelBackground,
+          decoration: style.labelDecoration,
           padding: style.headerPadding,
           alignment: style.labelAlignment,
           height: height,
@@ -249,7 +271,9 @@ class TimecardTable extends StatelessWidget {
           _buildHeaderCell(context, style, day, now, height),
         if (showRowTotals)
           _fillCell(
+            style: style,
             background: style.totalBackground,
+            decoration: style.totalDecoration,
             padding: style.headerPadding,
             alignment: style.headerAlignment,
             child: _text(totals.rowTotalHeader, style.cornerTextStyle, headerConfig),
@@ -282,14 +306,29 @@ class TimecardTable extends StatelessWidget {
       content = _defaultHeaderContent(style, ctx);
     }
     if (headerConfig.rotationDegrees != 0) {
-      content = Transform.rotate(
-        angle: headerConfig.rotationDegrees * math.pi / 180,
-        child: content,
+      // Let the content lay out at its natural (single-line) size *before*
+      // rotating: Transform.rotate doesn't affect layout, so without this the
+      // text would first wrap/clip to the narrow column width and only then
+      // rotate — truncating long labels like a full date's year.
+      content = OverflowBox(
+        minWidth: 0,
+        maxWidth: double.infinity,
+        minHeight: 0,
+        maxHeight: double.infinity,
+        alignment: Alignment.center,
+        child: Transform.rotate(
+          angle: headerConfig.rotationDegrees * math.pi / 180,
+          child: content,
+        ),
       );
     }
 
-    return _fillCell(
+    // Day-header cells are the row-height drivers (middle alignment): they
+    // always have content, unlike the corner, so the header keeps its height.
+    return _driverCell(
+      style: style,
       background: _dayBackground(style, isWeekend, isToday, style.headerBackground),
+      decoration: style.headerDecoration,
       padding: style.headerPadding,
       alignment: style.headerAlignment,
       height: height,
@@ -331,7 +370,9 @@ class TimecardTable extends StatelessWidget {
       key: ValueKey<String>(row.key),
       children: [
         _driverCell(
+          style: style,
           background: style.labelBackground ?? stripe,
+          decoration: style.labelDecoration,
           padding: style.labelPadding,
           alignment: style.labelAlignment,
           child: labelBuilder?.call(context, row, rowIndex) ??
@@ -342,7 +383,9 @@ class TimecardTable extends StatelessWidget {
           _buildDataCell(context, style, format, row, rowIndex, day, now, stripe),
         if (showRowTotals)
           _fillCell(
+            style: style,
             background: style.totalBackground,
+            decoration: style.totalDecoration,
             padding: style.cellPadding,
             alignment: style.cellAlignment,
             child: totalBuilder?.call(
@@ -373,6 +416,7 @@ class TimecardTable extends StatelessWidget {
     final isWeekend = _isWeekend(date);
     final isToday = TimecardUtils.isSameDate(date, now);
     final value = row.valueOn(day);
+    final marker = row.markerOn(day);
     final ctx = TimecardCellContext(
       row: row,
       rowIndex: rowIndex,
@@ -381,20 +425,26 @@ class TimecardTable extends StatelessWidget {
       value: value,
       isWeekend: isWeekend,
       isToday: isToday,
+      marker: marker,
     );
 
+    // Resolution for the built-in renderer: a recorded value wins; otherwise an
+    // illustrative marker; otherwise the empty placeholder. Markers never feed
+    // totals.
     final content = cellBuilder?.call(context, ctx) ??
-        _text(
-          value == null ? style.emptyPlaceholder : format(value),
-          style.cellTextStyle,
-          null,
-        );
+        (value != null
+            ? _text(format(value), style.cellTextStyle, null)
+            : marker != null
+                ? marker.build(context, style)
+                : _text(style.emptyPlaceholder, style.cellTextStyle, null));
 
     final background =
         _dayBackground(style, isWeekend, isToday, style.cellBackground ?? stripe);
 
     final cell = _fillCell(
+      style: style,
       background: background,
+      decoration: style.cellDecoration,
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       child: content,
@@ -426,7 +476,9 @@ class TimecardTable extends StatelessWidget {
     return TableRow(
       children: [
         _driverCell(
+          style: style,
           background: style.totalBackground,
+          decoration: style.totalDecoration,
           padding: style.labelPadding,
           alignment: style.labelAlignment,
           child: _text(totals.columnTotalLabel, style.totalTextStyle, null),
@@ -435,7 +487,9 @@ class TimecardTable extends StatelessWidget {
           _buildColumnTotalCell(context, style, format, day, now),
         if (showRowTotals)
           _fillCell(
+            style: style,
             background: style.totalBackground,
+            decoration: style.totalDecoration,
             padding: style.cellPadding,
             alignment: style.cellAlignment,
             child: totalBuilder?.call(
@@ -471,11 +525,105 @@ class TimecardTable extends StatelessWidget {
       isToday: isToday,
     );
     return _fillCell(
+      style: style,
       background: _dayBackground(style, isWeekend, isToday, style.totalBackground),
+      decoration: style.totalDecoration,
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       child: totalBuilder?.call(context, ctx) ??
           _text(format(total), style.totalTextStyle, null),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Summary rows
+  // ---------------------------------------------------------------------------
+
+  /// Evaluates [summaryRows] top-to-bottom so later rows can reference earlier
+  /// ones (and the data rows / data totals) through a [TimecardSummaryScope].
+  List<_EvaluatedSummary> _evaluateSummaries(List<int> days) {
+    final evaluated = <_EvaluatedSummary>[];
+    final byKey = <String, _EvaluatedSummary>{};
+
+    double? resolveValue(String key, int day) {
+      for (final r in timecardRows) {
+        if (r.key == key) return r.valueOn(day);
+      }
+      return byKey[key]?.values[day];
+    }
+
+    double? resolveRowTotal(String key) {
+      for (final r in timecardRows) {
+        if (r.key == key) return _rowTotal(r, days);
+      }
+      return byKey[key]?.total;
+    }
+
+    final scope = TimecardSummaryScope(_columnTotal, resolveValue, resolveRowTotal);
+
+    for (final row in summaryRows) {
+      final values = <int, double?>{
+        for (final day in days) day: row.valueOn(day, scope),
+      };
+      final double total = row.rowTotalCompute != null
+          ? row.rowTotalCompute!(scope)
+          : totals.aggregator(values.values.whereType<double>());
+      final e = _EvaluatedSummary(row, values, total);
+      evaluated.add(e);
+      byKey[row.key] = e;
+    }
+    return evaluated;
+  }
+
+  TableRow _buildSummaryRow(
+    BuildContext context,
+    TimecardTableStyle style,
+    TimecardValueFormatter format,
+    _EvaluatedSummary summary,
+    List<int> days,
+    bool showRowTotals,
+  ) {
+    final row = summary.row;
+    final background = row.background ?? style.totalBackground;
+    final textStyle = row.textStyle ?? style.totalTextStyle;
+    return TableRow(
+      key: ValueKey<String>('summary_${row.key}'),
+      children: [
+        _driverCell(
+          style: style,
+          background: background,
+          decoration: style.totalDecoration,
+          padding: style.labelPadding,
+          alignment: style.labelAlignment,
+          child: row.leading ?? _text(row.label, textStyle, null, maxLines: 2),
+        ),
+        for (final day in days)
+          _fillCell(
+            style: style,
+            background: background,
+            decoration: style.totalDecoration,
+            padding: style.cellPadding,
+            alignment: style.cellAlignment,
+            child: _text(
+              summary.values[day] == null
+                  ? style.emptyPlaceholder
+                  : format(summary.values[day]!),
+              textStyle,
+              null,
+            ),
+          ),
+        if (showRowTotals)
+          _fillCell(
+            style: style,
+            background: background,
+            decoration: style.totalDecoration,
+            padding: style.cellPadding,
+            alignment: style.cellAlignment,
+            child: row.showRowTotal
+                ? _text(format(summary.total), textStyle, null)
+                : const SizedBox.shrink(),
+          ),
+      ],
     );
   }
 
@@ -557,19 +705,23 @@ class TimecardTable extends StatelessWidget {
 
   /// A cell that determines its row's height (non-fill, middle aligned).
   Widget _driverCell({
+    required TimecardTableStyle style,
     required Widget child,
     required Color? background,
     required EdgeInsetsGeometry padding,
     required AlignmentGeometry alignment,
+    BoxDecoration? decoration,
     double? height,
   }) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Container(
-        height: height,
-        color: background,
+      child: _cellContainer(
+        style: style,
+        background: background,
+        decoration: decoration,
         padding: padding,
         alignment: alignment,
+        height: height,
         child: child,
       ),
     );
@@ -578,18 +730,73 @@ class TimecardTable extends StatelessWidget {
   /// A cell that stretches to its row's height (inherits the table default
   /// fill alignment), so column tints cover the full height.
   Widget _fillCell({
+    required TimecardTableStyle style,
     required Widget child,
     required Color? background,
     required EdgeInsetsGeometry padding,
     required AlignmentGeometry alignment,
+    BoxDecoration? decoration,
     double? height,
   }) {
+    return _cellContainer(
+      style: style,
+      background: background,
+      decoration: decoration,
+      padding: padding,
+      alignment: alignment,
+      height: height,
+      child: child,
+    );
+  }
+
+  /// Builds a cell's container, resolving the per-region [decoration] and the
+  /// [TimecardTableStyle.cardMode] spacing/rounding against the background tint.
+  Widget _cellContainer({
+    required TimecardTableStyle style,
+    required Color? background,
+    required BoxDecoration? decoration,
+    required EdgeInsetsGeometry padding,
+    required AlignmentGeometry alignment,
+    required double? height,
+    required Widget child,
+  }) {
+    // Fast path: a plain color fill (no decoration, not a card).
+    if (decoration == null && !style.cardMode) {
+      return Container(
+        height: height,
+        color: background,
+        padding: padding,
+        alignment: alignment,
+        child: child,
+      );
+    }
+    final base = decoration ?? const BoxDecoration();
+    final resolved = base.copyWith(
+      // The resolved background tint wins so weekend/today/stripe highlighting
+      // is preserved on top of a region decoration.
+      color: background ?? base.color,
+      borderRadius: style.cardMode
+          ? BorderRadius.circular(style.cardRadius ?? 8)
+          : base.borderRadius,
+      boxShadow: style.cardMode ? (style.cardShadow ?? base.boxShadow) : base.boxShadow,
+    );
     return Container(
       height: height,
-      color: background,
+      margin: style.cardMode ? EdgeInsets.all(style.cardSpacing / 2) : null,
+      decoration: resolved,
       padding: padding,
       alignment: alignment,
       child: child,
     );
   }
+}
+
+/// One [TimecardSummaryRow] resolved to its per-day values and trailing total.
+@immutable
+class _EvaluatedSummary {
+  const _EvaluatedSummary(this.row, this.values, this.total);
+
+  final TimecardSummaryRow row;
+  final Map<int, double?> values;
+  final double total;
 }

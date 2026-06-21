@@ -36,6 +36,14 @@ class TimecardTableStyle {
     this.border,
     this.borderRadius,
     this.emptyPlaceholder = '·',
+    this.cellDecoration,
+    this.headerDecoration,
+    this.totalDecoration,
+    this.labelDecoration,
+    this.cardMode = false,
+    this.cardSpacing = 4,
+    this.cardRadius,
+    this.cardShadow,
   });
 
   /// Builds a style whose defaults are aligned with [theme]/[ColorScheme].
@@ -146,6 +154,35 @@ class TimecardTableStyle {
   /// Text used for cells that have no recorded value.
   final String emptyPlaceholder;
 
+  /// Decoration applied to data cells (border, radius, gradient, shadow). The
+  /// resolved background tint is used as the decoration's color, so weekend /
+  /// today / stripe highlighting still takes precedence over a flat fill.
+  final BoxDecoration? cellDecoration;
+
+  /// Decoration applied to header cells. See [cellDecoration].
+  final BoxDecoration? headerDecoration;
+
+  /// Decoration applied to total cells (column / row / grand). See [cellDecoration].
+  final BoxDecoration? totalDecoration;
+
+  /// Decoration applied to leading label cells. See [cellDecoration].
+  final BoxDecoration? labelDecoration;
+
+  /// When `true`, every cell renders as a separated, rounded "card": the shared
+  /// table grid border is dropped, each cell is inset by [cardSpacing] and gets
+  /// rounded corners ([cardRadius]) plus an optional [cardShadow].
+  final bool cardMode;
+
+  /// Gap between cards in [cardMode]. Half of this is applied as the margin on
+  /// each side of every cell, so adjacent cells are separated by the full value.
+  final double cardSpacing;
+
+  /// Corner radius for cards in [cardMode]. Defaults to `8` when `null`.
+  final double? cardRadius;
+
+  /// Drop shadow for cards in [cardMode]. When `null`, cards are flat.
+  final List<BoxShadow>? cardShadow;
+
   /// Returns a copy of this style with the given fields replaced.
   TimecardTableStyle copyWith({
     TextStyle? headerTextStyle,
@@ -175,6 +212,14 @@ class TimecardTableStyle {
     TableBorder? border,
     BorderRadius? borderRadius,
     String? emptyPlaceholder,
+    BoxDecoration? cellDecoration,
+    BoxDecoration? headerDecoration,
+    BoxDecoration? totalDecoration,
+    BoxDecoration? labelDecoration,
+    bool? cardMode,
+    double? cardSpacing,
+    double? cardRadius,
+    List<BoxShadow>? cardShadow,
   }) {
     return TimecardTableStyle(
       headerTextStyle: headerTextStyle ?? this.headerTextStyle,
@@ -204,6 +249,14 @@ class TimecardTableStyle {
       border: border ?? this.border,
       borderRadius: borderRadius ?? this.borderRadius,
       emptyPlaceholder: emptyPlaceholder ?? this.emptyPlaceholder,
+      cellDecoration: cellDecoration ?? this.cellDecoration,
+      headerDecoration: headerDecoration ?? this.headerDecoration,
+      totalDecoration: totalDecoration ?? this.totalDecoration,
+      labelDecoration: labelDecoration ?? this.labelDecoration,
+      cardMode: cardMode ?? this.cardMode,
+      cardSpacing: cardSpacing ?? this.cardSpacing,
+      cardRadius: cardRadius ?? this.cardRadius,
+      cardShadow: cardShadow ?? this.cardShadow,
     );
   }
 
@@ -238,6 +291,14 @@ class TimecardTableStyle {
       border: border,
       borderRadius: borderRadius,
       emptyPlaceholder: emptyPlaceholder,
+      cellDecoration: cellDecoration,
+      headerDecoration: headerDecoration,
+      totalDecoration: totalDecoration,
+      labelDecoration: labelDecoration,
+      cardMode: cardMode,
+      cardSpacing: cardSpacing,
+      cardRadius: cardRadius,
+      cardShadow: cardShadow,
     );
   }
 }

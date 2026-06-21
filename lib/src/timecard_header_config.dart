@@ -41,7 +41,7 @@ class TimecardHeaderConfig {
   static const TimecardHeaderConfig verticalDates = TimecardHeaderConfig(
     label: TimecardHeaderLabel.fullDate,
     rotationDegrees: -90,
-    height: 96,
+    height: 104,
   );
 
   /// Day number with its short weekday name stacked underneath.

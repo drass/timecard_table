@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'timecard_marker.dart';
 import 'timecard_row.dart';
 
 /// Aggregates a set of cell values into a single summary number.
@@ -105,6 +106,7 @@ class TimecardCellContext {
     required this.value,
     required this.isWeekend,
     required this.isToday,
+    this.marker,
   });
 
   /// The row this cell belongs to.
@@ -128,8 +130,15 @@ class TimecardCellContext {
   /// Whether [date] is today.
   final bool isToday;
 
+  /// The illustrative marker for this day, or `null` when absent. Markers never
+  /// contribute to totals.
+  final TimecardMarker? marker;
+
   /// Whether this cell has a recorded value.
   bool get hasValue => value != null;
+
+  /// Whether this cell has an illustrative marker.
+  bool get hasMarker => marker != null;
 }
 
 /// Context passed to total builders for a column / row / grand total cell.

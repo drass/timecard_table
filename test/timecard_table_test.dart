@@ -63,6 +63,117 @@ void main() {
     expect(find.text('8'), findsWidgets);
   });
 
+  testWidgets('summary rows render and compute from data + earlier rows',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          timecardRows: rows,
+          totals: TimecardTotalsConfig.all,
+          summaryRows: [
+            TimecardSummaryRow.values(
+              key: 'ot',
+              label: 'Overtime',
+              values: {1: 1, 2: 2},
+            ),
+            TimecardSummaryRow.computed(
+              key: 'combined',
+              label: 'Combined',
+              compute: (day, scope) =>
+                  scope.dataTotal(day) + (scope.value('ot', day) ?? 0),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.text('Overtime'), findsOneWidget);
+    expect(find.text('Combined'), findsOneWidget);
+    // Day 2: data total 7.5 + 5 = 12.5, plus overtime 2 = 14.5 (unique).
+    expect(find.text('14.5'), findsOneWidget);
+  });
+
+  testWidgets('a computed row can reference another row total', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          timecardRows: rows,
+          totals: TimecardTotalsConfig.all,
+          summaryRows: [
+            TimecardSummaryRow.values(key: 'ot', label: 'OT', values: {1: 4}),
+            TimecardSummaryRow.computed(
+              key: 'grand',
+              label: 'Grand',
+              compute: (day, scope) => scope.dataTotal(day),
+              // Grand row-total: data grand (32.5) + overtime total (4) = 36.5.
+              rowTotalCompute: (scope) =>
+                  (scope.rowTotal('a') ?? 0) +
+                  (scope.rowTotal('b') ?? 0) +
+                  (scope.rowTotal('ot') ?? 0),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // a=23.5, b=9, ot=4 -> 36.5 (unique).
+    expect(find.text('36.5'), findsOneWidget);
+  });
+
+  testWidgets('markers render and are excluded from totals', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          totals: TimecardTotalsConfig.all,
+          timecardRows: [
+            TimecardRow(
+              key: 'm',
+              label: 'Marked',
+              values: {1: 8},
+              markers: {
+                2: const TimecardMarker.icon(Icons.sick, tooltip: 'Illness'),
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // The marker renders...
+    expect(find.byIcon(Icons.sick), findsOneWidget);
+    // ...and the only value (8) is the grand total — the marker added nothing.
+    expect(find.text('8'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('card mode + decorations build without layout errors',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          timecardRows: rows,
+          totals: TimecardTotalsConfig.all,
+          style: const TimecardTableStyle(
+            cardMode: true,
+            cardSpacing: 6,
+            cardRadius: 8,
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Project A'), findsOneWidget);
+  });
+
   test('aggregators compute expected values', () {
     expect(TimecardTotalsConfig.sum([1, 2, 3]), 6);
     expect(TimecardTotalsConfig.average([2, 4]), 3);

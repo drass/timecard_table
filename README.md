@@ -13,11 +13,17 @@ weekday names, or full dates — upright, **inclined**, or vertical.
 - 📅 Month-aware grid (leap years handled) with optional day-range subsets.
 - ➕ Built-in **summarization**: per-day totals row, per-row totals column,
   grand total — with a pluggable aggregator (sum / average / max / custom).
+- 🧮 **Derived summary rows** (`summaryRows`): add extra rows beneath the data
+  (e.g. overtime) and totals that build on other rows/totals — even on each
+  other (overtime → worked + overtime → grand).
+- 🏷️ **Event markers** (`TimecardRow.markers`): place an icon, symbol or widget
+  in a cell (illness, holiday…) that is illustrative only and never counted.
 - 🔁 **Header label modes**: day number, short/long weekday, day + weekday,
   full date, or a custom resolver — with arbitrary **rotation** (e.g. `-45°`
   inclined or `-90°` vertical) for compact matrix-style headers.
 - 🎨 Deep theming via `TimecardTableStyle` (colors, text styles, paddings,
-  column widths, borders, weekend/today highlights, zebra striping).
+  column widths, borders, weekend/today highlights, zebra striping) — plus
+  per-region `BoxDecoration`s and a spaced, rounded **card mode**.
 - 🧩 Per-region **builders** (`headerBuilder`, `cellBuilder`, `labelBuilder`,
   `totalBuilder`, `cornerBuilder`) for total control.
 - 👆 Cell tap callbacks, horizontal scrolling, theme-aligned defaults.
@@ -78,7 +84,46 @@ TimecardTable(
 )
 ```
 
-### Fully themed style
+### Derived summary rows (overtime + combined)
+
+```dart
+TimecardTable(
+  year: 2026,
+  month: Month.march,
+  totals: TimecardTotalsConfig.all,
+  timecardRows: rows,
+  summaryRows: [
+    // A manually entered extra row.
+    TimecardSummaryRow.values(key: 'ot', label: 'Overtime', values: {1: 1, 5: 2}),
+    // Derived from the data total + an earlier summary row.
+    TimecardSummaryRow.computed(
+      key: 'combined',
+      label: 'Worked + OT',
+      compute: (day, scope) => scope.dataTotal(day) + (scope.value('ot', day) ?? 0),
+    ),
+  ],
+)
+```
+
+`TimecardSummaryScope` exposes `dataTotal(day)`, `value(key, day)` and
+`rowTotal(key)`; rows evaluate top-to-bottom, so later rows can reference earlier
+ones.
+
+### Event markers (illustrative, never counted)
+
+```dart
+TimecardRow(
+  key: 'a',
+  label: 'Project A',
+  values: {1: 8, 2: 7.5},
+  markers: {
+    3: const TimecardMarker.icon(Icons.sick, tooltip: 'Illness'),
+    4: const TimecardMarker.text('H', tooltip: 'Holiday'),
+  },
+)
+```
+
+### Fully themed style + card cells
 
 ```dart
 TimecardTable(
@@ -90,6 +135,12 @@ TimecardTable(
     evenRowBackground: Colors.blueGrey.withValues(alpha: 0.05),
     border: TableBorder.all(color: Colors.black12),
     borderRadius: BorderRadius.circular(8),
+    // Or render each cell as a separated, rounded card:
+    cardMode: true,
+    cardSpacing: 6,
+    cardRadius: 10,
+    // Per-region decorations are also available:
+    cellDecoration: BoxDecoration(border: Border.all(color: Colors.black12)),
   ),
   timecardRows: rows,
 )
@@ -101,7 +152,10 @@ TimecardTable(
 | --- | --- |
 | What headers show + rotation | `TimecardHeaderConfig` (or `headerBuilder`) |
 | Which totals + how they're computed | `TimecardTotalsConfig` |
+| Extra / derived total rows | `summaryRows` (`TimecardSummaryRow`) |
+| Non-numeric event symbols / icons | `TimecardRow.markers` (`TimecardMarker`) |
 | Colors / text / sizes / borders | `TimecardTableStyle` |
+| Per-cell decorations / card layout | `TimecardTableStyle` (`cellDecoration`, `cardMode`) |
 | Replace a cell / label / total / corner | the matching `*Builder` |
 | Number formatting | `valueFormatter` |
 | Weekend / today highlighting | `weekendDays`, `today` |

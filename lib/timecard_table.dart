@@ -6,15 +6,12 @@
 /// the per-region builders on [TimecardTable].
 library;
 
-import 'package:flutter/material.dart';
-import 'package:flutter/widget_previews.dart';
-
-import 'package:timecard_table/timecard_table.dart';
-
 export 'src/timecard_header_config.dart';
+export 'src/timecard_marker.dart';
 export 'src/timecard_models.dart';
 export 'src/timecard_row.dart';
 export 'src/timecard_style.dart';
+export 'src/timecard_summary_row.dart';
 export 'src/timecard_table.dart';
 export 'src/timecard_title.dart';
 export 'src/timecard_totals_config.dart';

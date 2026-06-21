@@ -9,11 +9,19 @@ List<TimecardRow> _sampleRows() => [
     label: 'Project Apollo',
     description: 'Frontend work',
     values: {1: 8, 2: 7.5, 3: 8, 4: 6, 5: 7, 8: 8, 9: 4},
+    // Illustrative event markers — excluded from every total.
+    markers: {
+      6: const TimecardMarker.icon(Icons.sick, color: Colors.redAccent, tooltip: 'Illness'),
+      7: const TimecardMarker.icon(Icons.sick, color: Colors.redAccent, tooltip: 'Illness'),
+    },
   ),
   TimecardRow(
     key: 'job2',
     label: 'Project Gemini',
     values: {1: 4, 2: 5, 3: 6, 6: 3, 7: 2},
+    markers: {
+      10: const TimecardMarker.text('H', tooltip: 'Holiday'),
+    },
   ),
   TimecardRow(
     key: 'job3',
@@ -21,6 +29,37 @@ List<TimecardRow> _sampleRows() => [
     values: {1: 2, 2: 3, 4: 4, 10: 5},
   ),
 ];
+
+/// Summary rows: a manual overtime row, the per-day worked+overtime, and a
+/// grand row that sums both row-totals — each building on the rows above it.
+List<TimecardSummaryRow> _summaryRows() => [
+  TimecardSummaryRow.values(
+    key: 'overtime',
+    label: 'Overtime',
+    values: {1: 1, 5: 2, 9: 1.5},
+  ),
+  TimecardSummaryRow.computed(
+    key: 'combined',
+    label: 'Worked + OT',
+    compute: (day, scope) =>
+        scope.dataTotal(day) + (scope.value('overtime', day) ?? 0),
+  ),
+  TimecardSummaryRow.computed(
+    key: 'grand',
+    label: 'Grand total',
+    // Per day it mirrors the combined row; its trailing total sums the two
+    // contributing row-totals directly.
+    compute: (day, scope) => scope.value('combined', day),
+    rowTotalCompute: (scope) =>
+        (scope.rowTotal('overtime') ?? 0) + _dataRowsTotal(scope),
+  ),
+];
+
+/// Sum of the data rows' totals, for the grand summary row.
+double _dataRowsTotal(TimecardSummaryScope scope) =>
+    (scope.rowTotal('job1') ?? 0) +
+    (scope.rowTotal('job2') ?? 0) +
+    (scope.rowTotal('job3') ?? 0);
 
 @Preview(name: 'Default (day numbers + totals)')
 Widget defaultTimecard() {
@@ -56,6 +95,49 @@ Widget verticalDatesTimecard() {
       month: Month.march,
       headerConfig: TimecardHeaderConfig.verticalDates,
       totals: TimecardTotalsConfig.all,
+      timecardRows: _sampleRows(),
+    ),
+  );
+}
+
+@Preview(name: 'Summary rows (overtime + combined + grand)')
+Widget summaryRowsTimecard() {
+  return Center(
+    child: TimecardTable(
+      title: const TimecardTitle(
+        text: 'March 2026',
+        subtitle: 'With derived summary rows',
+      ),
+      year: 2026,
+      month: Month.march,
+      totals: TimecardTotalsConfig.all,
+      timecardRows: _sampleRows(),
+      summaryRows: _summaryRows(),
+    ),
+  );
+}
+
+@Preview(name: 'Card cells')
+Widget cardTimecard() {
+  return Center(
+    child: TimecardTable(
+      title: const TimecardTitle(text: 'Card layout'),
+      year: 2026,
+      month: Month.march,
+      headerConfig: TimecardHeaderConfig.dayAndWeekday,
+      totals: TimecardTotalsConfig.all,
+      style: TimecardTableStyle(
+        cardMode: true,
+        cardSpacing: 6,
+        cardRadius: 10,
+        cardShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       timecardRows: _sampleRows(),
     ),
   );
