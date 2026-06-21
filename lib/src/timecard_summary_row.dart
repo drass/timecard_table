@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'utils.dart';
+
 /// Resolves a single cell of a [TimecardSummaryRow.computed] row.
 ///
 /// Return `null` to leave the day blank. The [scope] gives read access to the
@@ -56,6 +58,7 @@ class TimecardSummaryRow {
     required this.key,
     required this.label,
     this.values,
+    this.dateValues,
     this.compute,
     this.rowTotalCompute,
     this.showRowTotal = true,
@@ -65,10 +68,14 @@ class TimecardSummaryRow {
   });
 
   /// A summary row backed by explicit per-day values.
+  ///
+  /// Values can be keyed by 1-based day of month via [values] and/or by full
+  /// [DateTime] via [dateValues]; a matching date entry takes precedence.
   factory TimecardSummaryRow.values({
     required String key,
     required String label,
     Map<int, double>? values,
+    Map<DateTime, double>? dateValues,
     bool showRowTotal = true,
     Widget? leading,
     Color? background,
@@ -78,6 +85,11 @@ class TimecardSummaryRow {
       key: key,
       label: label,
       values: Map<int, double>.unmodifiable(values ?? const <int, double>{}),
+      dateValues: Map<DateTime, double>.unmodifiable(<DateTime, double>{
+        if (dateValues != null)
+          for (final e in dateValues.entries)
+            TimecardUtils.dateKey(e.key): e.value,
+      }),
       showRowTotal: showRowTotal,
       leading: leading,
       background: background,
@@ -122,6 +134,10 @@ class TimecardSummaryRow {
   /// Explicit per-day values for a [TimecardSummaryRow.values] row.
   final Map<int, double>? values;
 
+  /// Explicit date-keyed values for a [TimecardSummaryRow.values] row. Keys are
+  /// normalized to their calendar day (time stripped).
+  final Map<DateTime, double>? dateValues;
+
   /// Per-day computation for a [TimecardSummaryRow.computed] row.
   final TimecardSummaryCompute? compute;
 
@@ -142,8 +158,15 @@ class TimecardSummaryRow {
   final TextStyle? textStyle;
 
   /// The value for [day], resolved against [scope]. `null` leaves the cell blank.
-  double? valueOn(int day, TimecardSummaryScope scope) {
+  ///
+  /// When [date] is supplied, a matching [dateValues] entry takes precedence
+  /// over the day-indexed [values] entry. Ignored for computed rows.
+  double? valueOn(int day, TimecardSummaryScope scope, [DateTime? date]) {
     if (compute != null) return compute!(day, scope);
+    if (date != null) {
+      final dated = dateValues?[TimecardUtils.dateKey(date)];
+      if (dated != null) return dated;
+    }
     return values?[day];
   }
 }

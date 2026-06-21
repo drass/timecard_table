@@ -174,6 +174,103 @@ void main() {
     expect(find.text('Project A'), findsOneWidget);
   });
 
+  testWidgets('date-keyed values render and feed totals', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          totals: TimecardTotalsConfig.all,
+          timecardRows: [
+            TimecardRow(
+              key: 'd',
+              label: 'Dated',
+              // Mixed keying: day 1 by index, March 2 by full date.
+              values: {1: 8},
+              dateValues: {DateTime(2026, 3, 2): 7.5},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // The date-keyed cell renders on its column and the totals sum both
+    // (8 + 7.5 = 15.5 appears as the row total and the grand total).
+    expect(find.text('7.5'), findsWidgets);
+    expect(find.text('15.5'), findsWidgets);
+  });
+
+  testWidgets('date keys outside the displayed month are ignored',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          totals: TimecardTotalsConfig.all,
+          timecardRows: [
+            TimecardRow(
+              key: 'd',
+              label: 'Dated',
+              dateValues: {
+                DateTime(2026, 3, 1): 8, // shown
+                DateTime(2026, 4, 1): 99, // different month -> ignored
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.text('99'), findsNothing);
+    expect(find.text('8'), findsWidgets); // value + total, no 99 contribution
+  });
+
+  testWidgets('data, header and total cells fire tap callbacks',
+      (tester) async {
+    TimecardCellContext? tappedCell;
+    TimecardHeaderContext? tappedHeader;
+    TimecardTotalContext? tappedTotal;
+
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          timecardRows: rows,
+          totals: TimecardTotalsConfig.all,
+          // Restrict to a few days and disable scrolling so the targeted texts
+          // are unique and on-screen.
+          startDay: 1,
+          endDay: 3,
+          scrollable: false,
+          onCellTap: (c) => tappedCell = c,
+          onHeaderTap: (h) => tappedHeader = h,
+          onTotalTap: (t) => tappedTotal = t,
+        ),
+      ),
+    );
+
+    // The InkWell overlay intentionally sits above the cell content (it is the
+    // full-cell tap target), so the tap lands on it rather than the Text.
+    await tester.tap(find.text('7.5'), warnIfMissed: false); // A, day 2
+    await tester.pump();
+    expect(tappedCell, isNotNull);
+    expect(tappedCell!.value, 7.5);
+    expect(tappedCell!.day, 2);
+
+    await tester.tap(find.text('23.5'), warnIfMissed: false); // A row total
+    await tester.pump();
+    expect(tappedTotal, isNotNull);
+    expect(tappedTotal!.kind, TimecardTotalKind.row);
+
+    // Header cells are tappable too (the "3" day header is unique here).
+    await tester.tap(find.text('3'), warnIfMissed: false);
+    await tester.pump();
+    expect(tappedHeader, isNotNull);
+    expect(tappedHeader!.day, 3);
+  });
+
   test('aggregators compute expected values', () {
     expect(TimecardTotalsConfig.sum([1, 2, 3]), 6);
     expect(TimecardTotalsConfig.average([2, 4]), 3);

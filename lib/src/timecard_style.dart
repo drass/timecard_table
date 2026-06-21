@@ -44,6 +44,8 @@ class TimecardTableStyle {
     this.cardSpacing = 4,
     this.cardRadius,
     this.cardShadow,
+    this.hoverColor,
+    this.splashColor,
   });
 
   /// Builds a style whose defaults are aligned with [theme]/[ColorScheme].
@@ -66,6 +68,8 @@ class TimecardTableStyle {
       todayBackground: scheme.primary.withValues(alpha: 0.12),
       border: TableBorder.all(color: scheme.outlineVariant, width: 1),
       borderRadius: BorderRadius.circular(8),
+      hoverColor: scheme.primary.withValues(alpha: 0.06),
+      splashColor: scheme.primary.withValues(alpha: 0.12),
     );
   }
 
@@ -183,6 +187,12 @@ class TimecardTableStyle {
   /// Drop shadow for cards in [cardMode]. When `null`, cards are flat.
   final List<BoxShadow>? cardShadow;
 
+  /// Hover highlight color for tappable cells (when a tap callback is set).
+  final Color? hoverColor;
+
+  /// Tap ripple color for tappable cells (when a tap callback is set).
+  final Color? splashColor;
+
   /// Returns a copy of this style with the given fields replaced.
   TimecardTableStyle copyWith({
     TextStyle? headerTextStyle,
@@ -220,6 +230,8 @@ class TimecardTableStyle {
     double? cardSpacing,
     double? cardRadius,
     List<BoxShadow>? cardShadow,
+    Color? hoverColor,
+    Color? splashColor,
   }) {
     return TimecardTableStyle(
       headerTextStyle: headerTextStyle ?? this.headerTextStyle,
@@ -257,6 +269,8 @@ class TimecardTableStyle {
       cardSpacing: cardSpacing ?? this.cardSpacing,
       cardRadius: cardRadius ?? this.cardRadius,
       cardShadow: cardShadow ?? this.cardShadow,
+      hoverColor: hoverColor ?? this.hoverColor,
+      splashColor: splashColor ?? this.splashColor,
     );
   }
 
@@ -299,6 +313,8 @@ class TimecardTableStyle {
       cardSpacing: cardSpacing,
       cardRadius: cardRadius,
       cardShadow: cardShadow,
+      hoverColor: hoverColor,
+      splashColor: splashColor,
     );
   }
 }

@@ -143,6 +143,46 @@ Widget cardTimecard() {
   );
 }
 
+@Preview(name: 'Date-keyed values + clickable cells')
+Widget datedClickableTimecard() {
+  return Center(
+    child: TimecardTable(
+      title: const TimecardTitle(
+        text: 'March 2026',
+        subtitle: 'Values keyed by date, tappable cells',
+      ),
+      year: 2026,
+      month: Month.march,
+      totals: TimecardTotalsConfig.all,
+      // Cells, day headers and totals all respond to taps with a hover
+      // highlight, ripple and pointer cursor.
+      onCellTap: (cell) => debugPrint('cell ${cell.date} = ${cell.value}'),
+      onHeaderTap: (header) => debugPrint('header ${header.date}'),
+      onTotalTap: (total) => debugPrint('${total.kind} total = ${total.total}'),
+      timecardRows: [
+        TimecardRow(
+          key: 'job1',
+          label: 'Project Apollo',
+          // Entries keyed by full DateTime instead of a day index.
+          dateValues: {
+            DateTime(2026, 3, 1): 8,
+            DateTime(2026, 3, 2): 7.5,
+            DateTime(2026, 3, 3): 8,
+            DateTime(2026, 3, 4): 6,
+          },
+        ),
+        // Day-index and date keys can be mixed across rows (or within one).
+        TimecardRow(
+          key: 'job2',
+          label: 'Project Gemini',
+          values: {1: 4, 2: 5},
+          dateValues: {DateTime(2026, 3, 3): 6},
+        ),
+      ],
+    ),
+  );
+}
+
 @Preview(name: 'Averages with custom builders')
 Widget customizedTimecard() {
   return Center(

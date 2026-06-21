@@ -123,6 +123,41 @@ TimecardRow(
 )
 ```
 
+### Date-keyed values
+
+Values and markers are normally keyed by 1-based day of month, but you can key
+them by full `DateTime` instead (or mix both — a matching date entry wins). Only
+dates that fall inside the displayed month are shown.
+
+```dart
+TimecardRow(
+  key: 'a',
+  label: 'Project A',
+  values: {1: 8},                        // by day index
+  dateValues: {DateTime(2026, 3, 2): 7.5}, // by date
+)
+```
+
+`TimecardSummaryRow.values` accepts `dateValues` the same way.
+
+### Clickable cells
+
+Set any of `onCellTap`, `onHeaderTap` or `onTotalTap` to make those cells
+interactive — each gets a hover highlight, tap ripple and pointer cursor
+(`hoverColor` / `splashColor` on `TimecardTableStyle` tune the colors).
+
+```dart
+TimecardTable(
+  year: 2026,
+  month: Month.march,
+  timecardRows: rows,
+  totals: TimecardTotalsConfig.all,
+  onCellTap: (cell) => print('${cell.date}: ${cell.value}'),
+  onHeaderTap: (header) => print(header.date),
+  onTotalTap: (total) => print('${total.kind}: ${total.total}'),
+)
+```
+
 ### Fully themed style + card cells
 
 ```dart
@@ -160,7 +195,8 @@ TimecardTable(
 | Number formatting | `valueFormatter` |
 | Weekend / today highlighting | `weekendDays`, `today` |
 | Show a subset of days | `startDay`, `endDay` |
-| Handle taps | `onCellTap` |
+| Key values by date | `TimecardRow.dateValues` / `dateMarkers` |
+| Handle taps (cell / header / total) | `onCellTap`, `onHeaderTap`, `onTotalTap` |
 
 See `lib/timecard_table_previews.dart` for runnable Widget Previews of each
 configuration.

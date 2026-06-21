@@ -105,4 +105,9 @@ class TimecardUtils {
   /// Whether two dates fall on the same calendar day.
   static bool isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Normalizes [date] to a time-stripped key (midnight, same calendar day) so
+  /// date-keyed maps look up consistently regardless of the original time.
+  static DateTime dateKey(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 }

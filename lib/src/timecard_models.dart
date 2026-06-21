@@ -35,6 +35,12 @@ typedef TimecardHeaderLabelResolver = String Function(TimecardHeaderContext head
 /// Called when a data cell is tapped.
 typedef TimecardCellTapCallback = void Function(TimecardCellContext cell);
 
+/// Called when a day-header cell is tapped.
+typedef TimecardHeaderTapCallback = void Function(TimecardHeaderContext header);
+
+/// Called when a total cell (column / row / grand) is tapped.
+typedef TimecardTotalTapCallback = void Function(TimecardTotalContext total);
+
 /// Built-in presets controlling what a day header displays.
 ///
 /// Use [TimecardHeaderLabel.custom] together with

@@ -1,3 +1,15 @@
+## 0.0.3
+
+* Add **date-keyed values/markers**: `TimecardRow.dateValues` / `dateMarkers`
+  (and `TimecardSummaryRow.values`' `dateValues`) let you key entries by full
+  `DateTime` instead of a 1-based day index. The two styles can be mixed; a
+  matching date entry takes precedence, and dates outside the displayed month
+  are ignored.
+* Add **clickable headers and totals**: new `onHeaderTap` and `onTotalTap`
+  callbacks alongside `onCellTap`. Tappable cells now show a hover highlight,
+  ripple and pointer cursor via an overlaid `InkWell`; `TimecardTableStyle`
+  gains `hoverColor` / `splashColor`.
+
 ## 0.0.2
 
 * Add **derived summary rows** (`TimecardTable.summaryRows` /

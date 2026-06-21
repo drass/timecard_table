@@ -60,6 +60,8 @@ class TimecardTable extends StatelessWidget {
     this.cornerBuilder,
     this.valueFormatter,
     this.onCellTap,
+    this.onHeaderTap,
+    this.onTotalTap,
     this.weekendDays = const {DateTime.saturday, DateTime.sunday},
     this.today,
     this.scrollable = true,
@@ -117,8 +119,17 @@ class TimecardTable extends StatelessWidget {
   /// number format (`8`, `7.5`, `7.25`).
   final TimecardValueFormatter? valueFormatter;
 
-  /// Called when a data cell is tapped.
+  /// Called when a data cell is tapped. Setting this also gives data cells a
+  /// hover highlight, ripple and pointer cursor.
   final TimecardCellTapCallback? onCellTap;
+
+  /// Called when a day-header cell is tapped. Setting this makes the day
+  /// headers interactive (hover / ripple / pointer cursor).
+  final TimecardHeaderTapCallback? onHeaderTap;
+
+  /// Called when a total cell (column / row / grand) is tapped. Setting this
+  /// makes the totals interactive (hover / ripple / pointer cursor).
+  final TimecardTotalTapCallback? onTotalTap;
 
   /// Weekday numbers (`DateTime.monday`..`DateTime.sunday`) treated as
   /// weekend for highlighting. Defaults to Saturday and Sunday.
@@ -241,6 +252,10 @@ class TimecardTable extends StatelessWidget {
 
   bool _isWeekend(DateTime date) => weekendDays.contains(date.weekday);
 
+  /// The full date for a 1-based [day] in the displayed month, used to resolve
+  /// date-keyed row values/markers.
+  DateTime _dateOf(int day) => DateTime(year, month.number, day);
+
   // ---------------------------------------------------------------------------
   // Header row
   // ---------------------------------------------------------------------------
@@ -332,6 +347,7 @@ class TimecardTable extends StatelessWidget {
       padding: style.headerPadding,
       alignment: style.headerAlignment,
       height: height,
+      onTap: onHeaderTap == null ? null : () => onHeaderTap!(ctx),
       child: content,
     );
   }
@@ -382,23 +398,32 @@ class TimecardTable extends StatelessWidget {
         for (final day in days)
           _buildDataCell(context, style, format, row, rowIndex, day, now, stripe),
         if (showRowTotals)
-          _fillCell(
-            style: style,
-            background: style.totalBackground,
-            decoration: style.totalDecoration,
-            padding: style.cellPadding,
-            alignment: style.cellAlignment,
-            child: totalBuilder?.call(
-                  context,
-                  TimecardTotalContext(
-                    kind: TimecardTotalKind.row,
-                    total: _rowTotal(row, days),
-                    row: row,
-                  ),
-                ) ??
-                _text(format(_rowTotal(row, days)), style.totalTextStyle, null),
-          ),
+          _buildRowTotalCell(context, style, format, row, days),
       ],
+    );
+  }
+
+  Widget _buildRowTotalCell(
+    BuildContext context,
+    TimecardTableStyle style,
+    TimecardValueFormatter format,
+    TimecardRow row,
+    List<int> days,
+  ) {
+    final ctx = TimecardTotalContext(
+      kind: TimecardTotalKind.row,
+      total: _rowTotal(row, days),
+      row: row,
+    );
+    return _fillCell(
+      style: style,
+      background: style.totalBackground,
+      decoration: style.totalDecoration,
+      padding: style.cellPadding,
+      alignment: style.cellAlignment,
+      onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
+      child: totalBuilder?.call(context, ctx) ??
+          _text(format(ctx.total), style.totalTextStyle, null),
     );
   }
 
@@ -415,8 +440,8 @@ class TimecardTable extends StatelessWidget {
     final date = DateTime(year, month.number, day);
     final isWeekend = _isWeekend(date);
     final isToday = TimecardUtils.isSameDate(date, now);
-    final value = row.valueOn(day);
-    final marker = row.markerOn(day);
+    final value = row.valueOn(day, date);
+    final marker = row.markerOn(day, date);
     final ctx = TimecardCellContext(
       row: row,
       rowIndex: rowIndex,
@@ -441,23 +466,14 @@ class TimecardTable extends StatelessWidget {
     final background =
         _dayBackground(style, isWeekend, isToday, style.cellBackground ?? stripe);
 
-    final cell = _fillCell(
+    return _fillCell(
       style: style,
       background: background,
       decoration: style.cellDecoration,
       padding: style.cellPadding,
       alignment: style.cellAlignment,
+      onTap: onCellTap == null ? null : () => onCellTap!(ctx),
       child: content,
-    );
-
-    if (onCellTap == null) return cell;
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.fill,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onCellTap!(ctx),
-        child: cell,
-      ),
     );
   }
 
@@ -486,22 +502,30 @@ class TimecardTable extends StatelessWidget {
         for (final day in days)
           _buildColumnTotalCell(context, style, format, day, now),
         if (showRowTotals)
-          _fillCell(
-            style: style,
-            background: style.totalBackground,
-            decoration: style.totalDecoration,
-            padding: style.cellPadding,
-            alignment: style.cellAlignment,
-            child: totalBuilder?.call(
-                  context,
-                  TimecardTotalContext(
-                    kind: TimecardTotalKind.grand,
-                    total: _grandTotal(days),
-                  ),
-                ) ??
-                _text(format(_grandTotal(days)), style.totalTextStyle, null),
-          ),
+          _buildGrandTotalCell(context, style, format, days),
       ],
+    );
+  }
+
+  Widget _buildGrandTotalCell(
+    BuildContext context,
+    TimecardTableStyle style,
+    TimecardValueFormatter format,
+    List<int> days,
+  ) {
+    final ctx = TimecardTotalContext(
+      kind: TimecardTotalKind.grand,
+      total: _grandTotal(days),
+    );
+    return _fillCell(
+      style: style,
+      background: style.totalBackground,
+      decoration: style.totalDecoration,
+      padding: style.cellPadding,
+      alignment: style.cellAlignment,
+      onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
+      child: totalBuilder?.call(context, ctx) ??
+          _text(format(ctx.total), style.totalTextStyle, null),
     );
   }
 
@@ -530,6 +554,7 @@ class TimecardTable extends StatelessWidget {
       decoration: style.totalDecoration,
       padding: style.cellPadding,
       alignment: style.cellAlignment,
+      onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
       child: totalBuilder?.call(context, ctx) ??
           _text(format(total), style.totalTextStyle, null),
     );
@@ -547,7 +572,7 @@ class TimecardTable extends StatelessWidget {
 
     double? resolveValue(String key, int day) {
       for (final r in timecardRows) {
-        if (r.key == key) return r.valueOn(day);
+        if (r.key == key) return r.valueOn(day, _dateOf(day));
       }
       return byKey[key]?.values[day];
     }
@@ -563,7 +588,7 @@ class TimecardTable extends StatelessWidget {
 
     for (final row in summaryRows) {
       final values = <int, double?>{
-        for (final day in days) day: row.valueOn(day, scope),
+        for (final day in days) day: row.valueOn(day, scope, _dateOf(day)),
       };
       final double total = row.rowTotalCompute != null
           ? row.rowTotalCompute!(scope)
@@ -632,9 +657,10 @@ class TimecardTable extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   double _columnTotal(int day) {
+    final date = _dateOf(day);
     final values = <double>[];
     for (final row in timecardRows) {
-      final v = row.valueOn(day);
+      final v = row.valueOn(day, date);
       if (v != null) {
         values.add(v);
       } else if (totals.includeEmptyAsZero) {
@@ -647,7 +673,7 @@ class TimecardTable extends StatelessWidget {
   double _rowTotal(TimecardRow row, List<int> days) {
     final values = <double>[];
     for (final day in days) {
-      final v = row.valueOn(day);
+      final v = row.valueOn(day, _dateOf(day));
       if (v != null) {
         values.add(v);
       } else if (totals.includeEmptyAsZero) {
@@ -661,7 +687,7 @@ class TimecardTable extends StatelessWidget {
     final values = <double>[];
     for (final row in timecardRows) {
       for (final day in days) {
-        final v = row.valueOn(day);
+        final v = row.valueOn(day, _dateOf(day));
         if (v != null) {
           values.add(v);
         } else if (totals.includeEmptyAsZero) {
@@ -712,17 +738,22 @@ class TimecardTable extends StatelessWidget {
     required AlignmentGeometry alignment,
     BoxDecoration? decoration,
     double? height,
+    VoidCallback? onTap,
   }) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
-      child: _cellContainer(
-        style: style,
-        background: background,
-        decoration: decoration,
-        padding: padding,
-        alignment: alignment,
-        height: height,
-        child: child,
+      child: _tappable(
+        style,
+        onTap,
+        _cellContainer(
+          style: style,
+          background: background,
+          decoration: decoration,
+          padding: padding,
+          alignment: alignment,
+          height: height,
+          child: child,
+        ),
       ),
     );
   }
@@ -737,15 +768,49 @@ class TimecardTable extends StatelessWidget {
     required AlignmentGeometry alignment,
     BoxDecoration? decoration,
     double? height,
+    VoidCallback? onTap,
   }) {
-    return _cellContainer(
-      style: style,
-      background: background,
-      decoration: decoration,
-      padding: padding,
-      alignment: alignment,
-      height: height,
-      child: child,
+    return _tappable(
+      style,
+      onTap,
+      _cellContainer(
+        style: style,
+        background: background,
+        decoration: decoration,
+        padding: padding,
+        alignment: alignment,
+        height: height,
+        child: child,
+      ),
+    );
+  }
+
+  /// Overlays a transparent [InkWell] on top of [cell] so a tap target gets a
+  /// hover highlight, ripple and pointer cursor — painted *above* the cell's
+  /// opaque background (a plain InkWell behind it would be hidden). Returns
+  /// [cell] unchanged when [onTap] is `null`.
+  Widget _tappable(TimecardTableStyle style, VoidCallback? onTap, Widget cell) {
+    if (onTap == null) return cell;
+    final radius = style.cardMode
+        ? BorderRadius.circular(style.cardRadius ?? 8)
+        : style.borderRadius;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        cell,
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onTap,
+              hoverColor: style.hoverColor,
+              splashColor: style.splashColor,
+              borderRadius: radius,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
