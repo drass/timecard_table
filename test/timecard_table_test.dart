@@ -290,4 +290,51 @@ void main() {
     expect(TimecardUtils.formatNumber(7.25), '7.25');
     expect(TimecardUtils.formatNumber(7.20), '7.2');
   });
+
+  testWidgets('rebuilding with different keyed rows and column count survives '
+      '(flutter/flutter#91068)', (tester) async {
+    // June (30 days): two dataset-specific keyed rows plus one keyed row
+    // ('shared') that persists across datasets at a different index.
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.june,
+          timecardRows: [
+            TimecardRow(key: 'a', label: 'Project A', values: {1: 8}),
+            TimecardRow(key: 'b', label: 'Project B', values: {2: 4}),
+            TimecardRow(key: 'shared', label: 'Shared', markers: {1: const TimecardMarker.text('N')}),
+          ],
+          summaryRows: [
+            TimecardSummaryRow.values(key: 's1', label: 'Overtime', values: {1: 1}),
+            TimecardSummaryRow.values(key: 's2', label: 'Ferie', values: {3: 8}),
+          ],
+        ),
+      ),
+    );
+    expect(find.text('Project A'), findsOneWidget);
+
+    // July (31 days): fewer rows, the persistent keyed row shifted up, fewer
+    // summary rows. Without the structural remount this in-place update trips
+    // the Table element assert "!renderObject.attached".
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.july,
+          timecardRows: [
+            TimecardRow(key: 'c', label: 'Project C', values: {5: 6}),
+            TimecardRow(key: 'shared', label: 'Shared', markers: {2: const TimecardMarker.text('S')}),
+          ],
+          summaryRows: [
+            TimecardSummaryRow.values(key: 's1', label: 'Overtime', values: {5: 1}),
+          ],
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Project C'), findsOneWidget);
+    expect(find.text('Project A'), findsNothing);
+  });
 }

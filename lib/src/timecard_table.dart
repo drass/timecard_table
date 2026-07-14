@@ -172,7 +172,23 @@ class TimecardTable extends StatelessWidget {
 
     final summaries = _evaluateSummaries(days);
 
+    // Table's element cannot survive structural updates (keyed rows added,
+    // removed or reordered, column count changed) without tripping the
+    // framework assert of flutter/flutter#91068, so any structural change
+    // remounts the grid instead of updating it in place.
+    final structureKey = ValueKey<int>(
+      Object.hashAll([
+        days.first,
+        days.last,
+        showRowTotals,
+        showColumnTotals,
+        for (final row in timecardRows) row.key,
+        for (final summary in summaries) summary.row.key,
+      ]),
+    );
+
     final table = Table(
+      key: structureKey,
       border: _resolveBorder(resolvedStyle),
       defaultVerticalAlignment: TableCellVerticalAlignment.fill,
       defaultColumnWidth: FixedColumnWidth(resolvedStyle.dayColumnWidth),
