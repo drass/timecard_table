@@ -139,7 +139,8 @@ class TimecardTable extends StatelessWidget {
   final DateTime? today;
 
   /// Whether to wrap the table in a horizontal scroll view (recommended for a
-  /// full month). When `false`, the table tries to fit the available width.
+  /// full month). When `false`, the day columns flex to share the available
+  /// width instead of using [TimecardTableStyle.dayColumnWidth].
   final bool scrollable;
 
   /// Optional controller for the horizontal scroll view.
@@ -191,7 +192,11 @@ class TimecardTable extends StatelessWidget {
       key: structureKey,
       border: _resolveBorder(resolvedStyle),
       defaultVerticalAlignment: TableCellVerticalAlignment.fill,
-      defaultColumnWidth: FixedColumnWidth(resolvedStyle.dayColumnWidth),
+      // When the table isn't scrollable the day columns flex to share the
+      // available width instead of overflowing at their fixed width.
+      defaultColumnWidth: scrollable
+          ? FixedColumnWidth(resolvedStyle.dayColumnWidth)
+          : const FlexColumnWidth(),
       columnWidths: _columnWidths(resolvedStyle, days.length, showRowTotals),
       children: [
         _buildHeaderRow(context, resolvedStyle, days, now, showRowTotals),
@@ -259,9 +264,9 @@ class TimecardTable extends StatelessWidget {
           : const IntrinsicColumnWidth(),
     };
     if (showRowTotals) {
-      widths[dayCount + 1] = FixedColumnWidth(
-        style.totalColumnWidth ?? style.dayColumnWidth * 1.4,
-      );
+      widths[dayCount + 1] = scrollable
+          ? FixedColumnWidth(style.totalColumnWidth ?? style.dayColumnWidth * 1.4)
+          : const FlexColumnWidth(1.4);
     }
     return widths;
   }
@@ -369,18 +374,21 @@ class TimecardTable extends StatelessWidget {
   }
 
   Widget _defaultHeaderContent(TimecardTableStyle style, TimecardHeaderContext ctx) {
+    final headerStyle = ctx.isToday
+        ? style.todayHeaderTextStyle ?? style.headerTextStyle
+        : style.headerTextStyle;
     if (headerConfig.label == TimecardHeaderLabel.dayAndWeekday) {
       final short =
           (headerConfig.shortWeekdays ?? TimecardUtils.defaultShortWeekdays)[ctx.date.weekday - 1];
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${ctx.day}', style: style.headerTextStyle),
+          Text('${ctx.day}', style: headerStyle),
           Text(short, style: style.weekdayTextStyle),
         ],
       );
     }
-    return _text(headerConfig.resolveLabel(ctx), style.headerTextStyle, headerConfig);
+    return _text(headerConfig.resolveLabel(ctx), headerStyle, headerConfig);
   }
 
   // ---------------------------------------------------------------------------
@@ -477,7 +485,8 @@ class TimecardTable extends StatelessWidget {
             ? _text(format(value), style.cellTextStyle, null)
             : marker != null
                 ? marker.build(context, style)
-                : _text(style.emptyPlaceholder, style.cellTextStyle, null));
+                : _text(style.emptyPlaceholder,
+                    style.emptyTextStyle ?? style.cellTextStyle, null));
 
     final background =
         _dayBackground(style, isWeekend, isToday, style.cellBackground ?? stripe);
@@ -645,13 +654,10 @@ class TimecardTable extends StatelessWidget {
             decoration: style.totalDecoration,
             padding: style.cellPadding,
             alignment: style.cellAlignment,
-            child: _text(
-              summary.values[day] == null
-                  ? style.emptyPlaceholder
-                  : format(summary.values[day]!),
-              textStyle,
-              null,
-            ),
+            child: summary.values[day] == null
+                ? _text(style.emptyPlaceholder,
+                    row.textStyle ?? style.emptyTextStyle ?? textStyle, null)
+                : _text(format(summary.values[day]!), textStyle, null),
           ),
         if (showRowTotals)
           _fillCell(

@@ -15,6 +15,8 @@ class TimecardTableStyle {
     this.labelTextStyle,
     this.totalTextStyle,
     this.cornerTextStyle,
+    this.emptyTextStyle,
+    this.todayHeaderTextStyle,
     this.headerBackground,
     this.labelBackground,
     this.totalBackground,
@@ -23,9 +25,9 @@ class TimecardTableStyle {
     this.cellBackground,
     this.evenRowBackground,
     this.oddRowBackground,
-    this.cellPadding = const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+    this.cellPadding = const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
     this.headerPadding = const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-    this.labelPadding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    this.labelPadding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     this.cellAlignment = Alignment.center,
     this.labelAlignment = Alignment.centerLeft,
     this.headerAlignment = Alignment.center,
@@ -49,25 +51,61 @@ class TimecardTableStyle {
   });
 
   /// Builds a style whose defaults are aligned with [theme]/[ColorScheme].
+  ///
+  /// The defaults follow dense-data-table practice: a quiet grid (full-strength
+  /// horizontal dividers, hairline vertical ones), tabular figures so digits
+  /// align across rows, a muted header, an emphasized totals region and a
+  /// dimmed placeholder for empty cells.
   factory TimecardTableStyle.fromTheme(ThemeData theme) {
     final scheme = theme.colorScheme;
     final text = theme.textTheme;
+    const tabularFigures = [FontFeature.tabularFigures()];
     return TimecardTableStyle(
-      headerTextStyle: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-      weekdayTextStyle: text.labelSmall?.copyWith(
-        color: text.labelSmall?.color?.withValues(alpha: 0.7),
+      headerTextStyle: text.labelMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurfaceVariant,
+        fontFeatures: tabularFigures,
       ),
-      cellTextStyle: text.bodyMedium,
+      weekdayTextStyle: text.labelSmall?.copyWith(
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+        letterSpacing: 0.4,
+      ),
+      cellTextStyle: text.bodyMedium?.copyWith(fontFeatures: tabularFigures),
       labelTextStyle: text.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-      totalTextStyle: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-      cornerTextStyle: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-      headerBackground: scheme.surfaceContainerHighest,
-      labelBackground: scheme.surfaceContainerHighest,
+      totalTextStyle: text.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontFeatures: tabularFigures,
+      ),
+      cornerTextStyle: text.labelMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurfaceVariant,
+      ),
+      emptyTextStyle: text.bodyMedium?.copyWith(
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
+      ),
+      todayHeaderTextStyle: text.labelMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: scheme.primary,
+        fontFeatures: tabularFigures,
+      ),
+      headerBackground: scheme.surfaceContainerLow,
+      labelBackground: scheme.surfaceContainerLow,
       totalBackground: scheme.surfaceContainerHigh,
-      weekendBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-      todayBackground: scheme.primary.withValues(alpha: 0.12),
-      border: TableBorder.all(color: scheme.outlineVariant, width: 1),
-      borderRadius: BorderRadius.circular(8),
+      weekendBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      todayBackground: scheme.primary.withValues(alpha: 0.1),
+      border: TableBorder(
+        top: BorderSide(color: scheme.outlineVariant),
+        right: BorderSide(color: scheme.outlineVariant),
+        bottom: BorderSide(color: scheme.outlineVariant),
+        left: BorderSide(color: scheme.outlineVariant),
+        horizontalInside:
+            BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        verticalInside: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.35),
+          width: 0.5,
+        ),
+      ),
+      borderRadius: BorderRadius.circular(12),
       hoverColor: scheme.primary.withValues(alpha: 0.06),
       splashColor: scheme.primary.withValues(alpha: 0.12),
     );
@@ -90,6 +128,15 @@ class TimecardTableStyle {
 
   /// Text style for the top-left corner cell.
   final TextStyle? cornerTextStyle;
+
+  /// Text style for the [emptyPlaceholder] shown in cells without a value.
+  /// Falls back to [cellTextStyle] when `null`; the theme default dims it so
+  /// recorded values stand out from empty days.
+  final TextStyle? emptyTextStyle;
+
+  /// Text style for today's day-header label, replacing [headerTextStyle]
+  /// for that column. Falls back to [headerTextStyle] when `null`.
+  final TextStyle? todayHeaderTextStyle;
 
   /// Background for the header row.
   final Color? headerBackground;
@@ -201,6 +248,8 @@ class TimecardTableStyle {
     TextStyle? labelTextStyle,
     TextStyle? totalTextStyle,
     TextStyle? cornerTextStyle,
+    TextStyle? emptyTextStyle,
+    TextStyle? todayHeaderTextStyle,
     Color? headerBackground,
     Color? labelBackground,
     Color? totalBackground,
@@ -240,6 +289,8 @@ class TimecardTableStyle {
       labelTextStyle: labelTextStyle ?? this.labelTextStyle,
       totalTextStyle: totalTextStyle ?? this.totalTextStyle,
       cornerTextStyle: cornerTextStyle ?? this.cornerTextStyle,
+      emptyTextStyle: emptyTextStyle ?? this.emptyTextStyle,
+      todayHeaderTextStyle: todayHeaderTextStyle ?? this.todayHeaderTextStyle,
       headerBackground: headerBackground ?? this.headerBackground,
       labelBackground: labelBackground ?? this.labelBackground,
       totalBackground: totalBackground ?? this.totalBackground,
@@ -284,6 +335,8 @@ class TimecardTableStyle {
       labelTextStyle: labelTextStyle,
       totalTextStyle: totalTextStyle,
       cornerTextStyle: cornerTextStyle,
+      emptyTextStyle: emptyTextStyle,
+      todayHeaderTextStyle: todayHeaderTextStyle,
       headerBackground: headerBackground,
       labelBackground: labelBackground,
       totalBackground: totalBackground,
