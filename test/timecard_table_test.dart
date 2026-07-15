@@ -337,4 +337,38 @@ void main() {
     expect(find.text('Project C'), findsOneWidget);
     expect(find.text('Project A'), findsNothing);
   });
+
+  testWidgets('non-scrollable day cells fit narrow flexed columns instead of '
+      'overflowing', (tester) async {
+    const totalWidth = 320.0;
+    await tester.pumpWidget(
+      wrap(
+        Center(
+          child: SizedBox(
+            width: totalWidth,
+            child: TimecardTable(
+              year: 2026,
+              month: Month.march, // 31 days
+              timecardRows: rows,
+              totals: TimecardTotalsConfig.all,
+              scrollable: false,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+
+    // With 31 flexed day columns plus label and total columns, each day column
+    // is well under the natural width of a two-digit header. The painted text
+    // must be scaled down to stay inside its column.
+    final maxDayColumnWidth = totalWidth / 31;
+    final headerRect = tester.getRect(find.text('28'));
+    expect(headerRect.width, lessThanOrEqualTo(maxDayColumnWidth));
+
+    // Data-cell values scale the same way.
+    final cellRect = tester.getRect(find.text('7.5'));
+    expect(cellRect.width, lessThanOrEqualTo(maxDayColumnWidth));
+  });
 }

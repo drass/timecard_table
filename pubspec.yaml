@@ -1,6 +1,6 @@
 name: timecard_table
 description: "A fully customizable, month-based summarization table widget for Flutter, with configurable headers (rotated/inclined day, weekday or date labels) and per-day/per-row/grand totals."
-version: 0.0.3
+version: 0.0.4
 homepage:
 
 environment:

@@ -312,6 +312,7 @@ class TimecardTable extends StatelessWidget {
             decoration: style.totalDecoration,
             padding: style.headerPadding,
             alignment: style.headerAlignment,
+            fit: !scrollable,
             child: _text(totals.rowTotalHeader, style.cornerTextStyle, headerConfig),
           ),
       ],
@@ -369,6 +370,9 @@ class TimecardTable extends StatelessWidget {
       alignment: style.headerAlignment,
       height: height,
       onTap: onHeaderTap == null ? null : () => onHeaderTap!(ctx),
+      // Rotated content is wrapped in an OverflowBox (unbounded constraints),
+      // which a FittedBox can't size — rotated headers keep their overflow.
+      fit: !scrollable && headerConfig.rotationDegrees == 0,
       child: content,
     );
   }
@@ -446,6 +450,7 @@ class TimecardTable extends StatelessWidget {
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
+      fit: !scrollable,
       child: totalBuilder?.call(context, ctx) ??
           _text(format(ctx.total), style.totalTextStyle, null),
     );
@@ -498,6 +503,7 @@ class TimecardTable extends StatelessWidget {
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       onTap: onCellTap == null ? null : () => onCellTap!(ctx),
+      fit: !scrollable,
       child: content,
     );
   }
@@ -549,6 +555,7 @@ class TimecardTable extends StatelessWidget {
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
+      fit: !scrollable,
       child: totalBuilder?.call(context, ctx) ??
           _text(format(ctx.total), style.totalTextStyle, null),
     );
@@ -580,6 +587,7 @@ class TimecardTable extends StatelessWidget {
       padding: style.cellPadding,
       alignment: style.cellAlignment,
       onTap: onTotalTap == null ? null : () => onTotalTap!(ctx),
+      fit: !scrollable,
       child: totalBuilder?.call(context, ctx) ??
           _text(format(total), style.totalTextStyle, null),
     );
@@ -654,6 +662,7 @@ class TimecardTable extends StatelessWidget {
             decoration: style.totalDecoration,
             padding: style.cellPadding,
             alignment: style.cellAlignment,
+            fit: !scrollable,
             child: summary.values[day] == null
                 ? _text(style.emptyPlaceholder,
                     row.textStyle ?? style.emptyTextStyle ?? textStyle, null)
@@ -666,6 +675,7 @@ class TimecardTable extends StatelessWidget {
             decoration: style.totalDecoration,
             padding: style.cellPadding,
             alignment: style.cellAlignment,
+            fit: !scrollable,
             child: row.showRowTotal
                 ? _text(format(summary.total), textStyle, null)
                 : const SizedBox.shrink(),
@@ -761,6 +771,7 @@ class TimecardTable extends StatelessWidget {
     BoxDecoration? decoration,
     double? height,
     VoidCallback? onTap,
+    bool fit = false,
   }) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
@@ -774,6 +785,7 @@ class TimecardTable extends StatelessWidget {
           padding: padding,
           alignment: alignment,
           height: height,
+          fit: fit,
           child: child,
         ),
       ),
@@ -791,6 +803,7 @@ class TimecardTable extends StatelessWidget {
     BoxDecoration? decoration,
     double? height,
     VoidCallback? onTap,
+    bool fit = false,
   }) {
     return _tappable(
       style,
@@ -802,6 +815,7 @@ class TimecardTable extends StatelessWidget {
         padding: padding,
         alignment: alignment,
         height: height,
+        fit: fit,
         child: child,
       ),
     );
@@ -838,6 +852,11 @@ class TimecardTable extends StatelessWidget {
 
   /// Builds a cell's container, resolving the per-region [decoration] and the
   /// [TimecardTableStyle.cardMode] spacing/rounding against the background tint.
+  ///
+  /// With [fit] the content (padding included) is scaled down to the cell's
+  /// width instead of overflowing — used by the day/total cells when the table
+  /// isn't scrollable, where the flexed columns can get narrower than the
+  /// content's natural single-line width on small screens.
   Widget _cellContainer({
     required TimecardTableStyle style,
     required Color? background,
@@ -846,13 +865,22 @@ class TimecardTable extends StatelessWidget {
     required AlignmentGeometry alignment,
     required double? height,
     required Widget child,
+    bool fit = false,
   }) {
+    var effectivePadding = padding;
+    if (fit) {
+      child = FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Padding(padding: padding, child: child),
+      );
+      effectivePadding = EdgeInsets.zero;
+    }
     // Fast path: a plain color fill (no decoration, not a card).
     if (decoration == null && !style.cardMode) {
       return Container(
         height: height,
         color: background,
-        padding: padding,
+        padding: effectivePadding,
         alignment: alignment,
         child: child,
       );
@@ -871,7 +899,7 @@ class TimecardTable extends StatelessWidget {
       height: height,
       margin: style.cardMode ? EdgeInsets.all(style.cardSpacing / 2) : null,
       decoration: resolved,
-      padding: padding,
+      padding: effectivePadding,
       alignment: alignment,
       child: child,
     );

@@ -1,3 +1,16 @@
+## 0.0.4
+
+* Fix day/total cells overflowing their columns when `scrollable: false` on
+  small screens: cell content (padding included) now scales down via a
+  `FittedBox` to fit the flexed column width. Rotated headers keep their
+  intentional overflow; row labels keep wrapping.
+* Add `emptyTextStyle` and `todayHeaderTextStyle` to `TimecardTableStyle`, with
+  theme-derived defaults (dimmed placeholder, primary-colored today header),
+  and tune the default cell/label paddings.
+* Fix a framework assert (flutter/flutter#91068) when rebuilding with keyed
+  rows added/removed/reordered or a different column count: structural changes
+  now remount the grid instead of updating it in place.
+
 ## 0.0.3
 
 * Add **date-keyed values/markers**: `TimecardRow.dateValues` / `dateMarkers`
