@@ -86,6 +86,8 @@ class TimecardHeaderContext {
     required this.date,
     required this.isWeekend,
     required this.isToday,
+    this.isHoliday = false,
+    this.holidayName,
   });
 
   /// 1-based day of the month.
@@ -99,6 +101,12 @@ class TimecardHeaderContext {
 
   /// Whether [date] is today.
   final bool isToday;
+
+  /// Whether [date] is a holiday (see [TimecardTable.holidays]).
+  final bool isHoliday;
+
+  /// Name of the holiday when [isHoliday], otherwise `null`.
+  final String? holidayName;
 }
 
 /// Context passed to cell builders / tap callbacks for one data cell.
@@ -112,6 +120,8 @@ class TimecardCellContext {
     required this.value,
     required this.isWeekend,
     required this.isToday,
+    this.isHoliday = false,
+    this.holidayName,
     this.marker,
   });
 
@@ -136,6 +146,12 @@ class TimecardCellContext {
   /// Whether [date] is today.
   final bool isToday;
 
+  /// Whether [date] is a holiday (see [TimecardTable.holidays]).
+  final bool isHoliday;
+
+  /// Name of the holiday when [isHoliday], otherwise `null`.
+  final String? holidayName;
+
   /// The illustrative marker for this day, or `null` when absent. Markers never
   /// contribute to totals.
   final TimecardMarker? marker;
@@ -158,6 +174,8 @@ class TimecardTotalContext {
     this.row,
     this.isWeekend = false,
     this.isToday = false,
+    this.isHoliday = false,
+    this.holidayName,
   });
 
   /// Which kind of total this cell shows.
@@ -180,4 +198,10 @@ class TimecardTotalContext {
 
   /// Whether the related day is today (column totals only).
   final bool isToday;
+
+  /// Whether the related day is a holiday (column totals only).
+  final bool isHoliday;
+
+  /// Name of the holiday when [isHoliday], otherwise `null`.
+  final String? holidayName;
 }

@@ -371,4 +371,38 @@ void main() {
     final cellRect = tester.getRect(find.text('7.5'));
     expect(cellRect.width, lessThanOrEqualTo(maxDayColumnWidth));
   });
+
+  testWidgets('holiday columns get their own tint and a named tooltip',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        TimecardTable(
+          year: 2026,
+          month: Month.march,
+          timecardRows: rows,
+          holidays: const {2: 'Patron saint'},
+          // A fixed "today" outside the month keeps the today tint out of the way.
+          today: DateTime(2020, 1, 1),
+          style: const TimecardTableStyle(
+            weekendBackground: Color(0xFF00FF00),
+            holidayBackground: Color(0xFF0000FF),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Patron saint'), findsOneWidget);
+
+    Color? backgroundOf(Finder text) {
+      final container = tester.widget<Container>(
+        find.ancestor(of: text, matching: find.byType(Container)).first,
+      );
+      return container.color ?? (container.decoration as BoxDecoration?)?.color;
+    }
+
+    // Day 2 is a monday in March 2026: only the holiday tint can apply.
+    expect(backgroundOf(find.text('7.5')), const Color(0xFF0000FF));
+    // Day 1 is a sunday and not a holiday, so it keeps the weekend tint.
+    expect(backgroundOf(find.text('8').first), const Color(0xFF00FF00));
+  });
 }

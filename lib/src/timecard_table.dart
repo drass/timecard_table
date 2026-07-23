@@ -22,11 +22,12 @@ import 'utils.dart';
 /// 1. **Config objects** — [TimecardHeaderConfig] (label mode + rotation),
 ///    [TimecardTotalsConfig] (what to summarise and how) and
 ///    [TimecardTableStyle] (every color, text style, padding and size).
-/// 2. **Value/formatting hooks** — [valueFormatter], [weekendDays], [today].
+/// 2. **Value/formatting hooks** — [valueFormatter], [weekendDays], [holidays],
+///    [today].
 /// 3. **Builders** — [headerBuilder], [cellBuilder], [labelBuilder],
 ///    [totalBuilder] and [cornerBuilder] let you replace any region's widget
 ///    entirely while still receiving the resolved context (date, value,
-///    weekend/today flags, totals, ...).
+///    weekend/holiday/today flags, totals, ...).
 ///
 /// Example — an "inclined matrix" of weekday headers with row totals:
 ///
@@ -63,6 +64,7 @@ class TimecardTable extends StatelessWidget {
     this.onHeaderTap,
     this.onTotalTap,
     this.weekendDays = const {DateTime.saturday, DateTime.sunday},
+    this.holidays = const <int, String>{},
     this.today,
     this.scrollable = true,
     this.scrollController,
@@ -134,6 +136,11 @@ class TimecardTable extends StatelessWidget {
   /// Weekday numbers (`DateTime.monday`..`DateTime.sunday`) treated as
   /// weekend for highlighting. Defaults to Saturday and Sunday.
   final Set<int> weekendDays;
+
+  /// Holidays of the displayed month as `1-based day -> holiday name`.
+  /// Holiday columns get their own tint ([TimecardTableStyle.holidayBackground])
+  /// and the name is shown as the day header's tooltip.
+  final Map<int, String> holidays;
 
   /// The date considered "today" for highlighting. Defaults to `DateTime.now()`.
   final DateTime? today;
@@ -329,11 +336,14 @@ class TimecardTable extends StatelessWidget {
     final date = DateTime(year, month.number, day);
     final isWeekend = _isWeekend(date);
     final isToday = TimecardUtils.isSameDate(date, now);
+    final holidayName = holidays[day];
     final ctx = TimecardHeaderContext(
       day: day,
       date: date,
       isWeekend: isWeekend,
       isToday: isToday,
+      isHoliday: holidayName != null,
+      holidayName: holidayName,
     );
 
     Widget content;
@@ -360,11 +370,16 @@ class TimecardTable extends StatelessWidget {
       );
     }
 
+    if (holidayName != null && holidayName.isNotEmpty) {
+      content = Tooltip(message: holidayName, child: content);
+    }
+
     // Day-header cells are the row-height drivers (middle alignment): they
     // always have content, unlike the corner, so the header keeps its height.
     return _driverCell(
       style: style,
-      background: _dayBackground(style, isWeekend, isToday, style.headerBackground),
+      background: _dayBackground(style, isWeekend, isToday, style.headerBackground,
+          isHoliday: ctx.isHoliday),
       decoration: style.headerDecoration,
       padding: style.headerPadding,
       alignment: style.headerAlignment,
@@ -471,6 +486,7 @@ class TimecardTable extends StatelessWidget {
     final isToday = TimecardUtils.isSameDate(date, now);
     final value = row.valueOn(day, date);
     final marker = row.markerOn(day, date);
+    final holidayName = holidays[day];
     final ctx = TimecardCellContext(
       row: row,
       rowIndex: rowIndex,
@@ -479,6 +495,8 @@ class TimecardTable extends StatelessWidget {
       value: value,
       isWeekend: isWeekend,
       isToday: isToday,
+      isHoliday: holidayName != null,
+      holidayName: holidayName,
       marker: marker,
     );
 
@@ -493,8 +511,9 @@ class TimecardTable extends StatelessWidget {
                 : _text(style.emptyPlaceholder,
                     style.emptyTextStyle ?? style.cellTextStyle, null));
 
-    final background =
-        _dayBackground(style, isWeekend, isToday, style.cellBackground ?? stripe);
+    final background = _dayBackground(
+        style, isWeekend, isToday, style.cellBackground ?? stripe,
+        isHoliday: ctx.isHoliday);
 
     return _fillCell(
       style: style,
@@ -572,6 +591,7 @@ class TimecardTable extends StatelessWidget {
     final isWeekend = _isWeekend(date);
     final isToday = TimecardUtils.isSameDate(date, now);
     final total = _columnTotal(day);
+    final holidayName = holidays[day];
     final ctx = TimecardTotalContext(
       kind: TimecardTotalKind.column,
       total: total,
@@ -579,10 +599,13 @@ class TimecardTable extends StatelessWidget {
       date: date,
       isWeekend: isWeekend,
       isToday: isToday,
+      isHoliday: holidayName != null,
+      holidayName: holidayName,
     );
     return _fillCell(
       style: style,
-      background: _dayBackground(style, isWeekend, isToday, style.totalBackground),
+      background: _dayBackground(style, isWeekend, isToday, style.totalBackground,
+          isHoliday: ctx.isHoliday),
       decoration: style.totalDecoration,
       padding: style.cellPadding,
       alignment: style.cellAlignment,
@@ -738,9 +761,11 @@ class TimecardTable extends StatelessWidget {
     TimecardTableStyle style,
     bool isWeekend,
     bool isToday,
-    Color? fallback,
-  ) {
+    Color? fallback, {
+    bool isHoliday = false,
+  }) {
     if (isToday && style.todayBackground != null) return style.todayBackground;
+    if (isHoliday && style.holidayBackground != null) return style.holidayBackground;
     if (isWeekend && style.weekendBackground != null) return style.weekendBackground;
     return fallback;
   }

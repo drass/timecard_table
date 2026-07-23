@@ -1,3 +1,11 @@
+## 0.0.5
+
+* Add **holiday support**: `TimecardTable.holidays` (`1-based day -> name`)
+  tints the day column with the new `TimecardTableStyle.holidayBackground`
+  (which takes precedence over `weekendBackground`) and shows the holiday name
+  as the day header's tooltip. `isHoliday` / `holidayName` are exposed on
+  `TimecardHeaderContext`, `TimecardCellContext` and `TimecardTotalContext`.
+
 ## 0.0.4
 
 * Fix day/total cells overflowing their columns when `scrollable: false` on

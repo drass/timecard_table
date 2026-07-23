@@ -69,6 +69,7 @@ Widget defaultTimecard() {
       year: 2026,
       month: Month.march,
       timecardRows: _sampleRows(),
+      holidays: const {10: 'Public holiday'},
     ),
   );
 }

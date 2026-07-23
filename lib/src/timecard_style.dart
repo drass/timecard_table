@@ -21,6 +21,7 @@ class TimecardTableStyle {
     this.labelBackground,
     this.totalBackground,
     this.weekendBackground,
+    this.holidayBackground,
     this.todayBackground,
     this.cellBackground,
     this.evenRowBackground,
@@ -92,6 +93,7 @@ class TimecardTableStyle {
       labelBackground: scheme.surfaceContainerLow,
       totalBackground: scheme.surfaceContainerHigh,
       weekendBackground: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      holidayBackground: scheme.tertiaryContainer.withValues(alpha: 0.35),
       todayBackground: scheme.primary.withValues(alpha: 0.1),
       border: TableBorder(
         top: BorderSide(color: scheme.outlineVariant),
@@ -149,6 +151,10 @@ class TimecardTableStyle {
 
   /// Background tint applied to weekend columns (header + cells).
   final Color? weekendBackground;
+
+  /// Background tint applied to holiday columns (header + cells). Takes
+  /// precedence over [weekendBackground] when a day is both.
+  final Color? holidayBackground;
 
   /// Background tint applied to today's column (header + cells).
   final Color? todayBackground;
@@ -254,6 +260,7 @@ class TimecardTableStyle {
     Color? labelBackground,
     Color? totalBackground,
     Color? weekendBackground,
+    Color? holidayBackground,
     Color? todayBackground,
     Color? cellBackground,
     Color? evenRowBackground,
@@ -295,6 +302,7 @@ class TimecardTableStyle {
       labelBackground: labelBackground ?? this.labelBackground,
       totalBackground: totalBackground ?? this.totalBackground,
       weekendBackground: weekendBackground ?? this.weekendBackground,
+      holidayBackground: holidayBackground ?? this.holidayBackground,
       todayBackground: todayBackground ?? this.todayBackground,
       cellBackground: cellBackground ?? this.cellBackground,
       evenRowBackground: evenRowBackground ?? this.evenRowBackground,
@@ -341,6 +349,7 @@ class TimecardTableStyle {
       labelBackground: labelBackground,
       totalBackground: totalBackground,
       weekendBackground: weekendBackground,
+      holidayBackground: holidayBackground,
       todayBackground: todayBackground,
       cellBackground: cellBackground,
       evenRowBackground: evenRowBackground,
