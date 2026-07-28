@@ -4,45 +4,29 @@ import 'package:flutter/widget_previews.dart';
 import 'timecard_table.dart';
 
 List<TimecardRow> _sampleRows() => [
+  TimecardRow(key: 'job1', label: 'Project Apollo', description: 'Frontend work', values: {1: 8, 2: 7.5, 3: 8, 4: 6, 5: 7, 8: 8, 9: 4}),
+  TimecardRow(key: 'job2', label: 'Project Gemini', values: {1: 4, 2: 5, 3: 6, 6: 3, 7: 2}),
+  TimecardRow(key: 'job3', label: 'Internal / Admin', values: {1: 2, 2: 3, 4: 4, 10: 5}),
   TimecardRow(
-    key: 'job1',
-    label: 'Project Apollo',
-    description: 'Frontend work',
-    values: {1: 8, 2: 7.5, 3: 8, 4: 6, 5: 7, 8: 8, 9: 4},
-    // Illustrative event markers — excluded from every total.
+    key: 'special_events',
+    label: 'Special Events',
     markers: {
-      6: const TimecardMarker.icon(Icons.sick, color: Colors.redAccent, tooltip: 'Illness'),
+      6: const TimecardMarker.icon(Icons.sick, color: Colors.greenAccent, tooltip: 'Illness'),
       7: const TimecardMarker.icon(Icons.sick, color: Colors.redAccent, tooltip: 'Illness'),
-    },
-  ),
-  TimecardRow(
-    key: 'job2',
-    label: 'Project Gemini',
-    values: {1: 4, 2: 5, 3: 6, 6: 3, 7: 2},
-    markers: {
+
       10: const TimecardMarker.text('H', tooltip: 'Holiday'),
     },
-  ),
-  TimecardRow(
-    key: 'job3',
-    label: 'Internal / Admin',
-    values: {1: 2, 2: 3, 4: 4, 10: 5},
   ),
 ];
 
 /// Summary rows: a manual overtime row, the per-day worked+overtime, and a
 /// grand row that sums both row-totals — each building on the rows above it.
 List<TimecardSummaryRow> _summaryRows() => [
-  TimecardSummaryRow.values(
-    key: 'overtime',
-    label: 'Overtime',
-    values: {1: 1, 5: 2, 9: 1.5},
-  ),
+  TimecardSummaryRow.values(key: 'overtime', label: 'Overtime', values: {1: 1, 5: 2, 9: 1.5}),
   TimecardSummaryRow.computed(
     key: 'combined',
     label: 'Worked + OT',
-    compute: (day, scope) =>
-        scope.dataTotal(day) + (scope.value('overtime', day) ?? 0),
+    compute: (day, scope) => scope.dataTotal(day) + (scope.value('overtime', day) ?? 0),
   ),
   TimecardSummaryRow.computed(
     key: 'grand',
@@ -50,16 +34,13 @@ List<TimecardSummaryRow> _summaryRows() => [
     // Per day it mirrors the combined row; its trailing total sums the two
     // contributing row-totals directly.
     compute: (day, scope) => scope.value('combined', day),
-    rowTotalCompute: (scope) =>
-        (scope.rowTotal('overtime') ?? 0) + _dataRowsTotal(scope),
+    rowTotalCompute: (scope) => (scope.rowTotal('overtime') ?? 0) + _dataRowsTotal(scope),
   ),
 ];
 
 /// Sum of the data rows' totals, for the grand summary row.
 double _dataRowsTotal(TimecardSummaryScope scope) =>
-    (scope.rowTotal('job1') ?? 0) +
-    (scope.rowTotal('job2') ?? 0) +
-    (scope.rowTotal('job3') ?? 0);
+    (scope.rowTotal('job1') ?? 0) + (scope.rowTotal('job2') ?? 0) + (scope.rowTotal('job3') ?? 0);
 
 @Preview(name: 'Default (day numbers + totals)')
 Widget defaultTimecard() {
@@ -105,10 +86,7 @@ Widget verticalDatesTimecard() {
 Widget summaryRowsTimecard() {
   return Center(
     child: TimecardTable(
-      title: const TimecardTitle(
-        text: 'March 2026',
-        subtitle: 'With derived summary rows',
-      ),
+      title: const TimecardTitle(text: 'March 2026', subtitle: 'With derived summary rows'),
       year: 2026,
       month: Month.march,
       totals: TimecardTotalsConfig.all,
@@ -131,13 +109,7 @@ Widget cardTimecard() {
         cardMode: true,
         cardSpacing: 6,
         cardRadius: 10,
-        cardShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        cardShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       timecardRows: _sampleRows(),
     ),
@@ -148,10 +120,7 @@ Widget cardTimecard() {
 Widget datedClickableTimecard() {
   return Center(
     child: TimecardTable(
-      title: const TimecardTitle(
-        text: 'March 2026',
-        subtitle: 'Values keyed by date, tappable cells',
-      ),
+      title: const TimecardTitle(text: 'March 2026', subtitle: 'Values keyed by date, tappable cells'),
       year: 2026,
       month: Month.march,
       totals: TimecardTotalsConfig.all,
@@ -165,20 +134,10 @@ Widget datedClickableTimecard() {
           key: 'job1',
           label: 'Project Apollo',
           // Entries keyed by full DateTime instead of a day index.
-          dateValues: {
-            DateTime(2026, 3, 1): 8,
-            DateTime(2026, 3, 2): 7.5,
-            DateTime(2026, 3, 3): 8,
-            DateTime(2026, 3, 4): 6,
-          },
+          dateValues: {DateTime(2026, 3, 1): 8, DateTime(2026, 3, 2): 7.5, DateTime(2026, 3, 3): 8, DateTime(2026, 3, 4): 6},
         ),
         // Day-index and date keys can be mixed across rows (or within one).
-        TimecardRow(
-          key: 'job2',
-          label: 'Project Gemini',
-          values: {1: 4, 2: 5},
-          dateValues: {DateTime(2026, 3, 3): 6},
-        ),
+        TimecardRow(key: 'job2', label: 'Project Gemini', values: {1: 4, 2: 5}, dateValues: {DateTime(2026, 3, 3): 6}),
       ],
     ),
   );
@@ -198,19 +157,13 @@ Widget customizedTimecard() {
         columnTotalLabel: 'Avg',
         rowTotalHeader: 'Avg',
       ),
-      style: TimecardTableStyle(
-        dayColumnWidth: 44,
-        evenRowBackground: Colors.blueGrey.withValues(alpha: 0.06),
-      ),
+      style: TimecardTableStyle(dayColumnWidth: 44, evenRowBackground: Colors.blueGrey.withValues(alpha: 0.06)),
       cellBuilder: (context, cell) {
         if (!cell.hasValue) return const Text('—');
         final heavy = cell.value! >= 8;
         return Text(
           cell.value!.toStringAsFixed(0),
-          style: TextStyle(
-            fontWeight: heavy ? FontWeight.bold : FontWeight.normal,
-            color: heavy ? Colors.red.shade700 : null,
-          ),
+          style: TextStyle(fontWeight: heavy ? FontWeight.bold : FontWeight.normal, color: heavy ? Colors.red.shade700 : null),
         );
       },
       timecardRows: _sampleRows(),
