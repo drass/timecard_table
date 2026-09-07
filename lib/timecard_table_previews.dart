@@ -96,6 +96,47 @@ Widget summaryRowsTimecard() {
   );
 }
 
+/// Interval bands: two lanes of highlighted day ranges, each span with its own
+/// message and color, placed above the data rows.
+List<TimecardSpanRow> _spanRows() => [
+  const TimecardSpanRow(
+    key: 'periods',
+    label: 'Periods',
+    placement: TimecardSpanPlacement.top,
+    spans: [
+      TimecardSpan(from: 1, to: 12, label: 'Onboarding & training', icon: Icons.school, background: Color(0xFFB3D4FF)),
+      TimecardSpan(from: 14, to: 22, label: 'On site — Milan', icon: Icons.place, background: Color(0xFFFFD9A0)),
+      TimecardSpan(from: 25, to: 31, label: 'Remote', background: Color(0xFFC8E6C9)),
+    ],
+  ),
+  TimecardSpanRow(
+    key: 'leave',
+    label: 'Leave',
+    placement: TimecardSpanPlacement.top,
+    spans: [
+      // Date bounds may start before the displayed month: the band is clipped
+      // to the visible range and its clipped edge is drawn square.
+      TimecardSpan.dates(from: DateTime(2026, 2, 25), to: DateTime(2026, 3, 4), label: 'Parental leave', background: const Color(0xFFF8BBD0)),
+      TimecardSpan.dates(from: DateTime(2026, 3, 18), to: DateTime(2026, 3, 19), label: 'PTO', background: const Color(0xFFE1BEE7)),
+    ],
+  ),
+];
+
+@Preview(name: 'Interval bands (span rows)')
+Widget spanRowsTimecard() {
+  return Center(
+    child: TimecardTable(
+      title: const TimecardTitle(text: 'March 2026', subtitle: 'Highlighted day intervals'),
+      year: 2026,
+      month: Month.march,
+      totals: TimecardTotalsConfig.all,
+      timecardRows: _sampleRows(),
+      spanRows: _spanRows(),
+      onSpanTap: (span) => debugPrint('${span.span.label}: ${span.resolved.startDay}-${span.resolved.endDay}'),
+    ),
+  );
+}
+
 @Preview(name: 'Card cells')
 Widget cardTimecard() {
   return Center(

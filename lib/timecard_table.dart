@@ -3,13 +3,15 @@
 /// See [TimecardTable] for the main entry point. Customize via
 /// [TimecardHeaderConfig] (header label mode + rotation),
 /// [TimecardTotalsConfig] (summarization), [TimecardTableStyle] (visuals), or
-/// the per-region builders on [TimecardTable].
+/// the per-region builders on [TimecardTable]. Annotate day intervals with
+/// [TimecardSpanRow] / [TimecardSpan].
 library;
 
 export 'src/timecard_header_config.dart';
 export 'src/timecard_marker.dart';
 export 'src/timecard_models.dart';
 export 'src/timecard_row.dart';
+export 'src/timecard_span.dart';
 export 'src/timecard_style.dart';
 export 'src/timecard_summary_row.dart';
 export 'src/timecard_table.dart';

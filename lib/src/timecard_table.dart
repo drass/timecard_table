@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'timecard_header_config.dart';
 import 'timecard_models.dart';
 import 'timecard_row.dart';
+import 'timecard_span.dart';
 import 'timecard_style.dart';
 import 'timecard_summary_row.dart';
 import 'timecard_title.dart';
@@ -50,6 +51,7 @@ class TimecardTable extends StatelessWidget {
     required this.year,
     required this.month,
     this.summaryRows = const <TimecardSummaryRow>[],
+    this.spanRows = const <TimecardSpanRow>[],
     this.title,
     this.style,
     this.headerConfig = const TimecardHeaderConfig(),
@@ -59,10 +61,12 @@ class TimecardTable extends StatelessWidget {
     this.labelBuilder,
     this.totalBuilder,
     this.cornerBuilder,
+    this.spanBuilder,
     this.valueFormatter,
     this.onCellTap,
     this.onHeaderTap,
     this.onTotalTap,
+    this.onSpanTap,
     this.weekendDays = const {DateTime.saturday, DateTime.sunday},
     this.holidays = const <int, String>{},
     this.today,
@@ -82,6 +86,15 @@ class TimecardTable extends StatelessWidget {
   /// computed row can build on the rows above it (e.g. an `overtime` row, then a
   /// `worked + overtime` row, then a grand total of both).
   final List<TimecardSummaryRow> summaryRows;
+
+  /// Annotation lanes highlighting day intervals as colored bands.
+  ///
+  /// Each [TimecardSpanRow] renders one row in which every [TimecardSpan] draws
+  /// a continuous bar from its first to its last day, with its message shown
+  /// once, centered over the whole interval. Spans hold no numbers and never
+  /// affect any total. A row's [TimecardSpanRow.placement] decides whether it
+  /// sits directly below the day headers or beneath everything else.
+  final List<TimecardSpanRow> spanRows;
 
   /// The calendar year of the displayed month.
   final int year;
@@ -117,6 +130,10 @@ class TimecardTable extends StatelessWidget {
   /// Replaces the top-left corner cell content.
   final WidgetBuilder? cornerBuilder;
 
+  /// Replaces a span band's content. Called once per band (not per day cell);
+  /// the returned widget is centered over the band's full interval.
+  final TimecardSpanBuilder? spanBuilder;
+
   /// Formats numeric values into cell/total strings. Defaults to a trimmed
   /// number format (`8`, `7.5`, `7.25`).
   final TimecardValueFormatter? valueFormatter;
@@ -132,6 +149,10 @@ class TimecardTable extends StatelessWidget {
   /// Called when a total cell (column / row / grand) is tapped. Setting this
   /// makes the totals interactive (hover / ripple / pointer cursor).
   final TimecardTotalTapCallback? onTotalTap;
+
+  /// Called when a span band is tapped. Setting this also gives the band a
+  /// hover highlight, ripple and pointer cursor.
+  final TimecardSpanTapCallback? onSpanTap;
 
   /// Weekday numbers (`DateTime.monday`..`DateTime.sunday`) treated as
   /// weekend for highlighting. Defaults to Saturday and Sunday.
@@ -179,6 +200,15 @@ class TimecardTable extends StatelessWidget {
         totals.showColumnTotals || totals.showGrandTotal;
 
     final summaries = _evaluateSummaries(days);
+    final resolvedSpanRows = <_ResolvedSpanRow>[
+      for (var i = 0; i < spanRows.length; i++)
+        _ResolvedSpanRow(
+          spanRows[i],
+          i,
+          spanRows[i].resolveSpans(year, month.number,
+              firstDay: days.first, lastDay: days.last),
+        ),
+    ];
 
     // Table's element cannot survive structural updates (keyed rows added,
     // removed or reordered, column count changed) without tripping the
@@ -192,6 +222,10 @@ class TimecardTable extends StatelessWidget {
         showColumnTotals,
         for (final row in timecardRows) row.key,
         for (final summary in summaries) summary.row.key,
+        // Placement is part of the structure: moving a span row between the
+        // top and bottom sections reorders keyed rows.
+        for (final span in resolvedSpanRows) span.row.key,
+        for (final span in resolvedSpanRows) span.row.placement,
       ]),
     );
 
@@ -207,12 +241,18 @@ class TimecardTable extends StatelessWidget {
       columnWidths: _columnWidths(resolvedStyle, days.length, showRowTotals),
       children: [
         _buildHeaderRow(context, resolvedStyle, days, now, showRowTotals),
+        for (final span in resolvedSpanRows)
+          if (span.row.placement == TimecardSpanPlacement.top)
+            _buildSpanRow(context, resolvedStyle, span, days, showRowTotals),
         for (var i = 0; i < timecardRows.length; i++)
           _buildDataRow(context, resolvedStyle, format, timecardRows[i], i, days, now, showRowTotals),
         if (showColumnTotals)
           _buildTotalsRow(context, resolvedStyle, format, days, now, showRowTotals),
         for (final summary in summaries)
           _buildSummaryRow(context, resolvedStyle, format, summary, days, showRowTotals),
+        for (final span in resolvedSpanRows)
+          if (span.row.placement == TimecardSpanPlacement.bottom)
+            _buildSpanRow(context, resolvedStyle, span, days, showRowTotals),
       ],
     );
 
@@ -708,6 +748,202 @@ class TimecardTable extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
+  // Span rows
+  // ---------------------------------------------------------------------------
+
+  TableRow _buildSpanRow(
+    BuildContext context,
+    TimecardTableStyle style,
+    _ResolvedSpanRow resolvedRow,
+    List<int> days,
+    bool showRowTotals,
+  ) {
+    final row = resolvedRow.row;
+    final background = row.background ?? style.spanRowBackground;
+    return TableRow(
+      key: ValueKey<String>('span_${row.key}'),
+      children: [
+        _driverCell(
+          style: style,
+          background: background,
+          decoration: style.labelDecoration,
+          padding: style.labelPadding,
+          alignment: style.labelAlignment,
+          height: row.height ?? style.spanRowHeight,
+          child: row.leading ??
+              _text(row.label, row.textStyle ?? style.labelTextStyle, null),
+        ),
+        for (final day in days)
+          _buildSpanCell(context, style, resolvedRow, day),
+        if (showRowTotals)
+          _fillCell(
+            style: style,
+            background: background,
+            padding: style.cellPadding,
+            alignment: style.cellAlignment,
+            child: const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSpanCell(
+    BuildContext context,
+    TimecardTableStyle style,
+    _ResolvedSpanRow resolvedRow,
+    int day,
+  ) {
+    final row = resolvedRow.row;
+    final background = row.background ?? style.spanRowBackground;
+    // The first declared span wins an overlap; use separate span rows for
+    // intervals that need to be visible at the same time.
+    ResolvedTimecardSpan? hit;
+    for (final resolved in resolvedRow.spans) {
+      if (resolved.covers(day)) {
+        hit = resolved;
+        break;
+      }
+    }
+    if (hit == null) {
+      return _fillCell(
+        style: style,
+        background: background,
+        padding: EdgeInsets.zero,
+        alignment: style.cellAlignment,
+        child: const SizedBox.shrink(),
+      );
+    }
+
+    final ctx = TimecardSpanContext(
+      row: row,
+      rowIndex: resolvedRow.index,
+      resolved: hit,
+      day: day,
+      date: _dateOf(day),
+    );
+    Widget band = _spanBand(context, style, ctx);
+    final tooltip = hit.span.tooltip ?? hit.span.label;
+    if (tooltip != null && tooltip.isNotEmpty) {
+      band = Tooltip(message: tooltip, child: band);
+    }
+    return _fillCell(
+      style: style,
+      background: background,
+      padding: EdgeInsets.zero,
+      alignment: style.cellAlignment,
+      onTap: onSpanTap == null ? null : () => onSpanTap!(ctx),
+      child: band,
+    );
+  }
+
+  /// One day's segment of a band. Adjacent segments share the same fill and
+  /// only the interval's outer corners are rounded, so the run reads as a
+  /// single bar; the message is drawn by the *last* segment (see
+  /// [_spanBandContent]).
+  Widget _spanBand(
+    BuildContext context,
+    TimecardTableStyle style,
+    TimecardSpanContext ctx,
+  ) {
+    final span = ctx.span;
+    final resolved = ctx.resolved;
+    final radius = span.radius ?? style.spanRadius;
+    // A clipped edge stays square to signal the interval continues outside the
+    // displayed range.
+    final leftRadius =
+        ctx.day == resolved.startDay && !resolved.clippedStart ? radius : 0.0;
+    final rightRadius =
+        ctx.day == resolved.endDay && !resolved.clippedEnd ? radius : 0.0;
+    return Padding(
+      padding: ctx.row.inset ?? style.spanInset,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: span.background ?? style.spanBackground,
+          borderRadius: BorderRadius.horizontal(
+            left: Radius.circular(leftRadius),
+            right: Radius.circular(rightRadius),
+          ),
+        ),
+        child: ctx.day == resolved.endDay
+            ? _spanBandContent(context, style, ctx)
+            : null,
+      ),
+    );
+  }
+
+  /// The band's message, laid out across the *whole* interval.
+  ///
+  /// Table cells are painted left to right, so content overflowing to the right
+  /// would be covered by the following cells' own backgrounds. The message is
+  /// therefore anchored on the band's last segment and spread leftwards over
+  /// the segments already painted: it is given the interval's full width
+  /// (segment width * length) and shifted back by half of the extra width, so
+  /// it ends up centered on the interval regardless of how many days it covers.
+  Widget _spanBandContent(
+    BuildContext context,
+    TimecardTableStyle style,
+    TimecardSpanContext ctx,
+  ) {
+    final content =
+        spanBuilder?.call(context, ctx) ?? _defaultSpanContent(style, ctx);
+    final length = ctx.resolved.length;
+    if (length == 1) return content;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final segment = constraints.maxWidth;
+        if (!segment.isFinite) return content;
+        final width = segment * length;
+        return Transform.translate(
+          offset: Offset(-segment * (length - 1) / 2, 0),
+          child: OverflowBox(
+            minWidth: width,
+            maxWidth: width,
+            alignment: Alignment.center,
+            child: content,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _defaultSpanContent(TimecardTableStyle style, TimecardSpanContext ctx) {
+    final span = ctx.span;
+    if (span.child != null) return span.child!;
+    final textStyle = span.textStyle ?? style.spanTextStyle;
+    final label = span.label;
+    final hasLabel = label != null && label.isNotEmpty;
+    if (span.icon == null && !hasLabel) return const SizedBox.shrink();
+    return Padding(
+      padding: style.spanLabelPadding,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (span.icon != null)
+            Padding(
+              padding: EdgeInsets.only(right: hasLabel ? 4 : 0),
+              child: Icon(
+                span.icon,
+                size: 14,
+                color: span.iconColor ?? textStyle?.color,
+              ),
+            ),
+          if (hasLabel)
+            Flexible(
+              child: Text(
+                label,
+                style: textStyle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Aggregation
   // ---------------------------------------------------------------------------
 
@@ -929,6 +1165,16 @@ class TimecardTable extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// One [TimecardSpanRow] with its spans clipped to the visible day window.
+@immutable
+class _ResolvedSpanRow {
+  const _ResolvedSpanRow(this.row, this.index, this.spans);
+
+  final TimecardSpanRow row;
+  final int index;
+  final List<ResolvedTimecardSpan> spans;
 }
 
 /// One [TimecardSummaryRow] resolved to its per-day values and trailing total.

@@ -1,3 +1,20 @@
+## 0.0.6
+
+* Add **interval bands** (`TimecardTable.spanRows`): a `TimecardSpanRow` is an
+  annotation lane in which each `TimecardSpan` highlights a closed day interval
+  as one continuous colored bar, with its message (plus optional icon) drawn
+  once, centered over the whole interval, and an optional tooltip. Bounds can be
+  1-based days (`TimecardSpan`) or full dates (`TimecardSpan.dates`); intervals
+  reaching outside the displayed month / day window are clipped and their
+  clipped edge is drawn square to signal the continuation. Rows can sit right
+  below the day headers or beneath everything else
+  (`TimecardSpanRow.placement`), react to taps (`onSpanTap`) and have their
+  content replaced (`spanBuilder`). Spans hold no values and never affect any
+  total.
+* `TimecardTableStyle` gains the span defaults `spanBackground`,
+  `spanTextStyle`, `spanRowBackground`, `spanRowHeight`, `spanInset`,
+  `spanRadius` and `spanLabelPadding`.
+
 ## 0.0.5
 
 * Add **holiday support**: `TimecardTable.holidays` (`1-based day -> name`)

@@ -16,6 +16,10 @@ weekday names, or full dates — upright, **inclined**, or vertical.
 - 🧮 **Derived summary rows** (`summaryRows`): add extra rows beneath the data
   (e.g. overtime) and totals that build on other rows/totals — even on each
   other (overtime → worked + overtime → grand).
+- 🎯 **Interval bands** (`spanRows`): highlight day ranges (`1 → 12 January`)
+  as continuous colored bars with a message shown once over the whole
+  interval — day- or date-bounded (clipped to the displayed month), tappable,
+  above or below the data.
 - 🏷️ **Event markers** (`TimecardRow.markers`): place an icon, symbol or widget
   in a cell (illness, holiday…) that is illustrative only and never counted.
 - 🔁 **Header label modes**: day number, short/long weekday, day + weekday,
@@ -25,7 +29,7 @@ weekday names, or full dates — upright, **inclined**, or vertical.
   column widths, borders, weekend/today highlights, zebra striping) — plus
   per-region `BoxDecoration`s and a spaced, rounded **card mode**.
 - 🧩 Per-region **builders** (`headerBuilder`, `cellBuilder`, `labelBuilder`,
-  `totalBuilder`, `cornerBuilder`) for total control.
+  `totalBuilder`, `cornerBuilder`, `spanBuilder`) for total control.
 - 👆 Cell tap callbacks, horizontal scrolling, theme-aligned defaults.
 
 ## Getting started
@@ -123,6 +127,61 @@ TimecardRow(
 )
 ```
 
+### Highlighted day intervals (span rows)
+
+Add annotation lanes that mark ranges of days — a training period, a stay on
+site, leave… Each `TimecardSpan` draws one continuous bar from its first to its
+last day, with its message rendered **once, centered over the whole interval**,
+so overlapping information stays readable. Spans hold no numbers and never
+affect any total.
+
+```dart
+TimecardTable(
+  year: 2026,
+  month: Month.january,
+  timecardRows: rows,
+  spanRows: [
+    TimecardSpanRow(
+      key: 'periods',
+      label: 'Periods',
+      placement: TimecardSpanPlacement.top, // right below the day headers
+      spans: [
+        TimecardSpan(
+          from: 1, to: 12,                  // 1-based days of the month
+          label: 'Onboarding & training',
+          icon: Icons.school,
+          background: Colors.blue.shade100,
+        ),
+        TimecardSpan(from: 15, to: 20, label: 'On site', background: Colors.orange.shade100),
+      ],
+    ),
+    // Bounds can also be full dates; intervals crossing the month are clipped
+    // to the visible range and their clipped edge is drawn square.
+    TimecardSpanRow(
+      key: 'leave',
+      label: 'Leave',
+      spans: [
+        TimecardSpan.dates(
+          from: DateTime(2025, 12, 20),
+          to: DateTime(2026, 1, 5),
+          label: 'Winter break',
+        ),
+      ],
+    ),
+  ],
+  onSpanTap: (span) => print('${span.span.label} on ${span.date}'),
+)
+```
+
+Within one row, the first span covering a day wins — put intervals that overlap
+in time on **separate span rows** so both stay visible. Band colors, height,
+pill inset and radius come from `TimecardSpan`/`TimecardSpanRow` or, as
+defaults, from `TimecardTableStyle` (`spanBackground`, `spanTextStyle`,
+`spanRowBackground`, `spanRowHeight`, `spanInset`, `spanRadius`). For perfectly
+seamless bars, drop the grid's vertical hairlines
+(`border: TableBorder(... verticalInside: BorderSide.none)`), which are painted
+above the cells.
+
 ### Date-keyed values
 
 Values and markers are normally keyed by 1-based day of month, but you can key
@@ -188,6 +247,7 @@ TimecardTable(
 | What headers show + rotation | `TimecardHeaderConfig` (or `headerBuilder`) |
 | Which totals + how they're computed | `TimecardTotalsConfig` |
 | Extra / derived total rows | `summaryRows` (`TimecardSummaryRow`) |
+| Highlight a day interval with a message | `spanRows` (`TimecardSpanRow` / `TimecardSpan`) |
 | Non-numeric event symbols / icons | `TimecardRow.markers` (`TimecardMarker`) |
 | Colors / text / sizes / borders | `TimecardTableStyle` |
 | Per-cell decorations / card layout | `TimecardTableStyle` (`cellDecoration`, `cardMode`) |
@@ -196,7 +256,7 @@ TimecardTable(
 | Weekend / today highlighting | `weekendDays`, `today` |
 | Show a subset of days | `startDay`, `endDay` |
 | Key values by date | `TimecardRow.dateValues` / `dateMarkers` |
-| Handle taps (cell / header / total) | `onCellTap`, `onHeaderTap`, `onTotalTap` |
+| Handle taps (cell / header / total / band) | `onCellTap`, `onHeaderTap`, `onTotalTap`, `onSpanTap` |
 
 See `lib/timecard_table_previews.dart` for runnable Widget Previews of each
 configuration.

@@ -405,4 +405,117 @@ void main() {
     // Day 1 is a sunday and not a holiday, so it keeps the weekend tint.
     expect(backgroundOf(find.text('8').first), const Color(0xFF00FF00));
   });
+
+  group('span rows', () {
+    testWidgets('a band spans its interval and shows its message once',
+        (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          TimecardTable(
+            year: 2026,
+            month: Month.january,
+            timecardRows: rows,
+            spanRows: const [
+              TimecardSpanRow(
+                key: 'periods',
+                label: 'Periods',
+                placement: TimecardSpanPlacement.top,
+                spans: [
+                  TimecardSpan(
+                    from: 1,
+                    to: 12,
+                    label: 'Training',
+                    background: Color(0xFFFF00FF),
+                  ),
+                  TimecardSpan(from: 15, to: 20, label: 'On site'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Periods'), findsOneWidget);
+      expect(find.text('Training'), findsOneWidget);
+      expect(find.text('On site'), findsOneWidget);
+
+      // The message is centered over the whole interval, not over a single day.
+      final band = tester.getRect(find.text('Training'));
+      final day1 = tester.getRect(find.text('1').first);
+      final day12 = tester.getRect(find.text('12').first);
+      expect(band.center.dx, closeTo((day1.center.dx + day12.center.dx) / 2, 1));
+      expect(band.left, greaterThanOrEqualTo(day1.left - 1));
+      expect(band.right, lessThanOrEqualTo(day12.right + 1));
+    });
+
+    testWidgets('date bounds are clipped to the displayed month', (tester) async {
+      var tapped = 0;
+      await tester.pumpWidget(
+        wrap(
+          TimecardTable(
+            year: 2026,
+            month: Month.january,
+            timecardRows: rows,
+            onSpanTap: (span) => tapped++,
+            spanRows: [
+              TimecardSpanRow(
+                key: 'leave',
+                label: 'Leave',
+                spans: [
+                  // Runs from December into January: clipped to days 1..5.
+                  TimecardSpan.dates(
+                    from: DateTime(2025, 12, 20),
+                    to: DateTime(2026, 1, 5),
+                    label: 'Winter break',
+                  ),
+                  // Entirely outside the displayed month: dropped.
+                  TimecardSpan.dates(
+                    from: DateTime(2026, 3, 1),
+                    to: DateTime(2026, 3, 4),
+                    label: 'Elsewhere',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Winter break'), findsOneWidget);
+      expect(find.text('Elsewhere'), findsNothing);
+
+      final band = tester.getRect(find.text('Winter break'));
+      final day1 = tester.getRect(find.text('1').first);
+      final day5 = tester.getRect(find.text('5').first);
+      expect(band.center.dx, closeTo((day1.center.dx + day5.center.dx) / 2, 1));
+
+      // Any point on the band is tappable (the message is painted across the
+      // interval, so its center sits on a neighbouring cell of the same band).
+      await tester.tapAt(band.center);
+      expect(tapped, 1);
+    });
+
+    testWidgets('spans never contribute to any total', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          TimecardTable(
+            year: 2026,
+            month: Month.march,
+            timecardRows: rows,
+            totals: TimecardTotalsConfig.all,
+            spanRows: const [
+              TimecardSpanRow(
+                key: 'periods',
+                label: 'Periods',
+                spans: [TimecardSpan(from: 1, to: 3, label: 'Audit')],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Same grand total as without the span row: 23.5 + 9.
+      expect(find.text('32.5'), findsOneWidget);
+    });
+  });
 }

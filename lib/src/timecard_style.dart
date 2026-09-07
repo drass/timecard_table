@@ -49,6 +49,13 @@ class TimecardTableStyle {
     this.cardShadow,
     this.hoverColor,
     this.splashColor,
+    this.spanBackground,
+    this.spanTextStyle,
+    this.spanRowBackground,
+    this.spanRowHeight = 30,
+    this.spanInset = const EdgeInsets.symmetric(vertical: 4),
+    this.spanRadius = 6,
+    this.spanLabelPadding = const EdgeInsets.symmetric(horizontal: 8),
   });
 
   /// Builds a style whose defaults are aligned with [theme]/[ColorScheme].
@@ -110,6 +117,12 @@ class TimecardTableStyle {
       borderRadius: BorderRadius.circular(12),
       hoverColor: scheme.primary.withValues(alpha: 0.06),
       splashColor: scheme.primary.withValues(alpha: 0.12),
+      spanBackground: scheme.secondaryContainer,
+      spanTextStyle: text.labelMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: scheme.onSecondaryContainer,
+      ),
+      spanRowBackground: scheme.surfaceContainerLowest,
     );
   }
 
@@ -246,6 +259,28 @@ class TimecardTableStyle {
   /// Tap ripple color for tappable cells (when a tap callback is set).
   final Color? splashColor;
 
+  /// Default band color for a [TimecardSpan] without its own `background`.
+  final Color? spanBackground;
+
+  /// Default text style for a span band's message.
+  final TextStyle? spanTextStyle;
+
+  /// Background of a [TimecardSpanRow]'s cells outside any band.
+  final Color? spanRowBackground;
+
+  /// Height of a [TimecardSpanRow]. Kept compact so annotation lanes don't
+  /// compete with the data rows.
+  final double spanRowHeight;
+
+  /// Inset between a span band and its cell, giving the band its "pill" look.
+  final EdgeInsets spanInset;
+
+  /// Corner radius of a span band's outer edges.
+  final double spanRadius;
+
+  /// Padding around a span band's message.
+  final EdgeInsets spanLabelPadding;
+
   /// Returns a copy of this style with the given fields replaced.
   TimecardTableStyle copyWith({
     TextStyle? headerTextStyle,
@@ -288,6 +323,13 @@ class TimecardTableStyle {
     List<BoxShadow>? cardShadow,
     Color? hoverColor,
     Color? splashColor,
+    Color? spanBackground,
+    TextStyle? spanTextStyle,
+    Color? spanRowBackground,
+    double? spanRowHeight,
+    EdgeInsets? spanInset,
+    double? spanRadius,
+    EdgeInsets? spanLabelPadding,
   }) {
     return TimecardTableStyle(
       headerTextStyle: headerTextStyle ?? this.headerTextStyle,
@@ -330,6 +372,13 @@ class TimecardTableStyle {
       cardShadow: cardShadow ?? this.cardShadow,
       hoverColor: hoverColor ?? this.hoverColor,
       splashColor: splashColor ?? this.splashColor,
+      spanBackground: spanBackground ?? this.spanBackground,
+      spanTextStyle: spanTextStyle ?? this.spanTextStyle,
+      spanRowBackground: spanRowBackground ?? this.spanRowBackground,
+      spanRowHeight: spanRowHeight ?? this.spanRowHeight,
+      spanInset: spanInset ?? this.spanInset,
+      spanRadius: spanRadius ?? this.spanRadius,
+      spanLabelPadding: spanLabelPadding ?? this.spanLabelPadding,
     );
   }
 
@@ -377,6 +426,13 @@ class TimecardTableStyle {
       cardShadow: cardShadow,
       hoverColor: hoverColor,
       splashColor: splashColor,
+      spanBackground: spanBackground,
+      spanTextStyle: spanTextStyle,
+      spanRowBackground: spanRowBackground,
+      spanRowHeight: spanRowHeight,
+      spanInset: spanInset,
+      spanRadius: spanRadius,
+      spanLabelPadding: spanLabelPadding,
     );
   }
 }
