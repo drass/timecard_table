@@ -495,6 +495,42 @@ void main() {
       expect(tapped, 1);
     });
 
+    testWidgets('a tappable band does not clip its message to one cell',
+        (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          TimecardTable(
+            year: 2026,
+            month: Month.january,
+            timecardRows: rows,
+            onSpanTap: (_) {},
+            spanRows: const [
+              TimecardSpanRow(
+                key: 'periods',
+                label: 'Periods',
+                spans: [TimecardSpan(from: 1, to: 12, label: 'Training')],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // The message is laid out across the whole interval and therefore
+      // overflows the single cell that hosts it. The tap overlay wraps that
+      // cell in a Stack, which clips by default — it must not here, otherwise
+      // the label is painted away (entirely, for a wide enough interval).
+      final stacks = tester.widgetList<Stack>(
+        find.ancestor(
+          of: find.text('Training'),
+          matching: find.byType(Stack),
+        ),
+      );
+      expect(stacks, isNotEmpty);
+      for (final stack in stacks) {
+        expect(stack.clipBehavior, Clip.none);
+      }
+    });
+
     testWidgets('spans never contribute to any total', (tester) async {
       await tester.pumpWidget(
         wrap(

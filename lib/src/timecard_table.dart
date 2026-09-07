@@ -832,6 +832,9 @@ class TimecardTable extends StatelessWidget {
       padding: EdgeInsets.zero,
       alignment: style.cellAlignment,
       onTap: onSpanTap == null ? null : () => onSpanTap!(ctx),
+      // The band's message deliberately overflows this cell (see
+      // [_spanBandContent]), so the tap overlay must not clip it.
+      clipContent: false,
       child: band,
     );
   }
@@ -880,6 +883,10 @@ class TimecardTable extends StatelessWidget {
   /// the segments already painted: it is given the interval's full width
   /// (segment width * length) and shifted back by half of the extra width, so
   /// it ends up centered on the interval regardless of how many days it covers.
+  ///
+  /// This only works while nothing between the cell and the content clips: any
+  /// wrapper added inside a span cell must keep [Clip.none] (which is why
+  /// [_buildSpanCell] passes `clipContent: false` to [_fillCell]).
   Widget _spanBandContent(
     BuildContext context,
     TimecardTableStyle style,
@@ -1065,6 +1072,7 @@ class TimecardTable extends StatelessWidget {
     double? height,
     VoidCallback? onTap,
     bool fit = false,
+    bool clipContent = true,
   }) {
     return _tappable(
       style,
@@ -1079,6 +1087,7 @@ class TimecardTable extends StatelessWidget {
         fit: fit,
         child: child,
       ),
+      clipContent: clipContent,
     );
   }
 
@@ -1086,13 +1095,22 @@ class TimecardTable extends StatelessWidget {
   /// hover highlight, ripple and pointer cursor — painted *above* the cell's
   /// opaque background (a plain InkWell behind it would be hidden). Returns
   /// [cell] unchanged when [onTap] is `null`.
-  Widget _tappable(TimecardTableStyle style, VoidCallback? onTap, Widget cell) {
+  ///
+  /// The overlay [Stack] clips to the cell by default; [clipContent] `false`
+  /// keeps content that is meant to overflow the cell visible (span bands).
+  Widget _tappable(
+    TimecardTableStyle style,
+    VoidCallback? onTap,
+    Widget cell, {
+    bool clipContent = true,
+  }) {
     if (onTap == null) return cell;
     final radius = style.cardMode
         ? BorderRadius.circular(style.cardRadius ?? 8)
         : style.borderRadius;
     return Stack(
       fit: StackFit.passthrough,
+      clipBehavior: clipContent ? Clip.hardEdge : Clip.none,
       children: [
         cell,
         Positioned.fill(
